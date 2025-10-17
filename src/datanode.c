@@ -50,7 +50,7 @@ DNStatus datanode_alloc_block(int block_index)
     dn->size += BLOCK_SIZE;
     
     LOGD(dn->node_id, "block with id=%d created", block_index);    
-    return DN_FAIL;
+    return DN_SUCCESS;
 }
 
 DNStatus datanode_free_block(int block_index)
@@ -120,6 +120,7 @@ DNStatus datanode_exit(int * sockfd)
     *sockfd = dn->sock_fd;
     if (dn) {
         free(dn);
+        dn = NULL;
     }
     return DN_SUCCESS;
 }
