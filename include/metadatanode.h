@@ -1,13 +1,19 @@
 #ifndef METADATA_NODE_H
 #define METADATA_NODE_H
 
-#include "datanode.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/socket.h>
+#include <sys/wait.h>
 
 #define LOGM(fmt, ...) \
     do { \
         printf("[MetadataNode] " fmt "\n", ##__VA_ARGS__); \
         fflush(stdout); \
     } while (0)
+
+typedef struct DataNode DataNode;
+typedef struct AllocPolicy AllocPolicy;
 
 typedef enum {
     MDN_SUCCESS = 0,
@@ -44,10 +50,10 @@ typedef struct {
     DataNode * nodes;
     NodeConnection * connections;
 
-    // AllocPolicy * policy;
+    AllocPolicy * policy;
 } MetadataNode;
 
-MDNStatus metadatanode_init(int num_dns, size_t capacity);
+MDNStatus metadatanode_init(int num_dns, size_t capacity, const char *policy_name);
 
 MDNStatus metadatanode_exit();
 

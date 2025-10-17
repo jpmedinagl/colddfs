@@ -12,4 +12,7 @@ add_executable(workload
     src/metadatanode.c
     src/datanode.c
     src/communication.c
+    src/allocationpolicy.c
+    src/rand.c
+    src/roundrobin.c
 )
