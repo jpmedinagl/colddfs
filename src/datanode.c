@@ -166,9 +166,16 @@ DNStatus datanode_service_loop(int sock_fd)
                 if (payload_size >= sizeof(int)) {
                     int block_index;
                     memcpy(&block_index, payload, sizeof(int));
-                    char buffer[4096];
+                    
+                    void *buffer = malloc(BLOCK_SIZE);
+                    if (!buffer) {
+                        dn_send_response(sock_fd, DN_FAIL, NULL, 0);
+                        break;
+                    }
+
                     status = datanode_read_block(block_index, buffer);
                     dn_send_response(sock_fd, status, buffer, sizeof(buffer));
+                    free(buffer);
                 } else {
                     dn_send_response(sock_fd, DN_FAIL, NULL, 0);
                 }
@@ -177,9 +184,16 @@ DNStatus datanode_service_loop(int sock_fd)
             case DN_WRITE_BLOCK: {
                 if (payload_size >= sizeof(int) + 4096) {
                     int block_index;
-                    char buffer[4096];
+                    void *buffer = malloc(BLOCK_SIZE);
+                    
+                    if (!buffer) {
+                        dn_send_response(sock_fd, DN_FAIL, NULL, 0);
+                        break;
+                    }
+
                     memcpy(&block_index, payload, sizeof(int));
-                    memcpy(buffer, (char*)payload + sizeof(int), 4096);
+                    memcpy(buffer, (char*)payload + sizeof(int), BLOCK_SIZE);
+                    
                     status = datanode_write_block(block_index, buffer);
                     dn_send_response(sock_fd, status, NULL, 0);
                 } else {
