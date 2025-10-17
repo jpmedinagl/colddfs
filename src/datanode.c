@@ -71,7 +71,25 @@ DNStatus datanode_free_block(int block_index)
 
 DNStatus datanode_read_block(int block_index, void * buffer)
 {
-    return DN_FAIL;
+    char filepath[512];
+    snprintf(filepath, sizeof(filepath), "%s/block_%d.dat", dn->dir_path, block_index);
+
+    FILE *f = fopen(filepath, "rb");
+    if (!f) {
+        perror("fopen");
+        return DN_FAIL;
+    }
+
+    size_t read_bytes = fread(buffer, 1, BLOCK_SIZE, f);
+    fclose(f);
+
+    if (read_bytes != BLOCK_SIZE) {
+        LOGD(dn->node_id, "incomplete read for block %d", block_index);
+        return DN_FAIL;
+    }
+
+    LOGD(dn->node_id, "read block %d", block_index);
+    return DN_SUCCESS;
 }
 
 DNStatus datanode_write_block(int block_index, void * buffer)
