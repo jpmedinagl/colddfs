@@ -30,34 +30,26 @@ DNStatus datanode_init(int sock_fd, void *payload, size_t payload_size)
     return DN_SUCCESS;
 }
 
-DNStatus datanode_alloc_block(int *block_index)
+DNStatus datanode_alloc_block(int block_index)
 {
     if (dn->size + BLOCK_SIZE > dn->capacity) {
+        LOGD(dn->node_id, "no more space in this node");
         return DN_NO_SPACE;
     }
 
     char filepath[512];
-    snprintf(filepath, sizeof(filepath), "%s/block_%d.dat", dn->dir_path, *block_index);
+    snprintf(filepath, sizeof(filepath), "%s/block_%d.dat", dn->dir_path, block_index);
     
-    // FILE *f = fopen(filepath, "wb");
-    // if (!f) {
-    //     perror("fopen");
-    //     return DN_FAIL;
-    // }
-
-    // size_t block_size = BLOCK_SIZE;
-    // void *buffer = calloc(1, block_size);
-    // if (!buffer) {
-    //     fclose(f);
-    //     return DN_FAIL;
-    // }
-
-    // fwrite(buffer, 1, block_size, f);
-    // free(buffer);
-    // fclose(f);
+    FILE *f = fopen(filepath, "wb");
+    if (!f) {
+        perror("fopen");
+        return DN_FAIL;
+    }
+    fclose(f);
 
     dn->size += BLOCK_SIZE;
     
+    LOGD(dn->node_id, "block with id=%d created", block_index);    
     return DN_FAIL;
 }
 
@@ -106,8 +98,9 @@ DNStatus datanode_service_loop(int sock_fd)
                 break;
             case DN_ALLOC_BLOCK: {
                 int block_index;
-                status = datanode_alloc_block(&block_index);
-                dn_send_response(sock_fd, status, &block_index, sizeof(block_index));
+                memcpy(&block_index, payload, sizeof(int));
+                status = datanode_alloc_block(block_index);
+                dn_send_response(sock_fd, status, NULL, 0);
                 break;
             }
             case DN_FREE_BLOCK: {
