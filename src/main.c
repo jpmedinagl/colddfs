@@ -5,7 +5,7 @@
 int main(void) {
     printf("Hello, CMake C project!\n");
 
-    metadatanode_init(3, 3 * 1024);
+    metadatanode_init(3, 3 * 1024, "roundrobin");
 
     metadatanode_exit();
 

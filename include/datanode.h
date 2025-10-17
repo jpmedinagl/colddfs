@@ -5,15 +5,9 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <unistd.h>
 #include <sys/types.h>
-#include <sys/socket.h>
 #include <sys/stat.h>
-#include <errno.h>
-#include <fcntl.h>
-#include <signal.h>
-#include <sys/wait.h>
 
 #include "communication.h"
 
@@ -23,7 +17,15 @@
         fflush(stdout); \
     } while (0)
 
-typedef struct {
+
+typedef enum {
+    DN_SUCCESS = 0,
+    DN_NO_SPACE,
+    DN_INVALID_BLOCK,
+    DN_FAIL
+} DNStatus;
+
+typedef struct DataNode {
     int node_id;
     char dir_path[256];
     size_t capacity;

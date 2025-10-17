@@ -1,4 +1,6 @@
 #include "metadatanode.h"
+#include "datanode.h"
+#include "allocationpolicy.h"
 
 MetadataNode * md = NULL;
 
@@ -73,7 +75,7 @@ MDNStatus connect_datanodes()
     return MDN_SUCCESS;
 }
 
-MDNStatus metadatanode_init(int num_dns, size_t capacity)
+MDNStatus metadatanode_init(int num_dns, size_t capacity, const char *policy_name)
 {   
     md = malloc(sizeof(MetadataNode));
 
@@ -86,6 +88,11 @@ MDNStatus metadatanode_init(int num_dns, size_t capacity)
     md->num_nodes = num_dns;
     md->nodes = malloc(md->num_nodes * sizeof(DataNode));
     if (!md->nodes) return MDN_FAIL;
+
+    if (!alloc_policy_init(policy_name)) {
+        fprintf(stderr, "Failed to initialize allocation policy\n");
+        return MDN_FAIL;
+    }
     
     status = initialize_datanodes(md);
     if (status != MDN_SUCCESS)
