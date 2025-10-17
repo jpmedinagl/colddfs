@@ -11,4 +11,5 @@ add_executable(workload
     src/main.c
     src/metadatanode.c
     src/datanode.c
+    src/communication.c
 )
