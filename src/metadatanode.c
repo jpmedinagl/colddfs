@@ -24,10 +24,10 @@ MDNStatus initialize_datanodes()
         if (pid == 0) {
             // child
             close(fds[0]);
-            
-            datanode_init(fds[1]);
-            datanode_service_loop();
-            
+            free(md->connections);
+            free(md->nodes);
+            free(md);
+            datanode_service_loop(fds[1]);
             exit(0);
         } else {
             // parent
@@ -42,21 +42,28 @@ MDNStatus initialize_datanodes()
 
 MDNStatus connect_datanodes()
 {
-    int ack;
     size_t node_capacity = md->fs_capacity / md->num_nodes;
 
     LOGM("Connecting %d data nodes", md->num_nodes);
     for (int i = 0; i < md->num_nodes; i++) {
-        write(md->connections[i].sock_fd, &i, sizeof(i));
-        write(md->connections[i].sock_fd, &node_capacity, sizeof(node_capacity));
+        DNInitPayload payload = { .node_id = i, .capacity = node_capacity };
         
-        if (read(md->connections[i].sock_fd, &ack, sizeof(ack)) != sizeof(ack)) {
-            perror("read ack failed");
+        if (md_send_command(md->connections[i].sock_fd, DN_INIT, &payload, sizeof(payload)) != 0) {
+            perror("Failed to send DN_INIT");
+            return MDN_FAIL;
+        }
+        
+        DNStatus status;
+        void *response_payload = NULL;
+        size_t response_size = 0;
+
+        if (md_recv_response(md->connections[i].sock_fd, &status, &response_payload, &response_size) != 0) {
+            perror("Failed to receive DN_INIT response");
             return MDN_FAIL;
         }
 
-        if (ack != 1) {
-            fprintf(stderr, "Datanode %i failed to initialize.", i);
+        if (status != DN_SUCCESS) {
+            fprintf(stderr, "Datanode %i failed to initialize.\n", i);
             return MDN_FAIL;
         }
 
@@ -95,11 +102,28 @@ MDNStatus metadatanode_exit()
     for (int i = 0; i < md->num_nodes; i++) {
         pid_t pid = md->connections[i].pid;
         if (pid > 0) {
-            kill(pid, SIGTERM);
+            DNCommand cmd = DN_EXIT;
 
-            int status;
-            waitpid(pid, &status, 0);
-            LOGM("Datanode %d killed", i);
+            if (md_send_command(md->connections[i].sock_fd, cmd, NULL, 0) != 0) {
+                perror("Failed to send DN_EXIT");
+                return MDN_FAIL;
+            }
+
+            DNStatus status;
+            void *response_payload = NULL;
+            size_t response_size = 0;
+            
+            if (md_recv_response(md->connections[i].sock_fd, &status, &response_payload, &response_size) != 0) {
+                perror("Failed to receive DN_EXIT response");
+            }
+
+            if (status == DN_FAIL) {
+                fprintf(stderr, "Datanode %i failed to exit.\n", i);
+            }
+
+            int exit;
+            waitpid(pid, &exit, 0);
+            LOGM("Datanode %d exited", i);
         }
 
         close(md->connections[i].sock_fd);
@@ -108,10 +132,11 @@ MDNStatus metadatanode_exit()
     free(md->connections);
     md->connections = NULL;
 
-    if (md->nodes) {
-        free(md->nodes);
-        md->nodes = NULL;
-    }
+    free(md->nodes);
+    md->nodes = NULL;
+    
+    free(md);
+    md = NULL;
 
     return MDN_SUCCESS;
 }

@@ -2,25 +2,24 @@
 
 DataNode * dn = NULL;
 
-DNStatus datanode_init(int sock_fd)
+DNStatus datanode_init(int sock_fd, void *payload, size_t payload_size)
 {
     dn = malloc(sizeof(DataNode));
-
     dn->sock_fd = sock_fd;
 
-    if (read(dn->sock_fd, &dn->node_id, sizeof(dn->node_id)) != sizeof(dn->node_id)) {
+    if (payload_size < sizeof(int) + sizeof(size_t)) {
+        DNStatus status = DN_FAIL;
+        dn_send_response(sock_fd, status, NULL, 0);
+        free(dn);
         return DN_FAIL;
     }
+
+    DNInitPayload *init = (DNInitPayload*)payload;
+    dn->node_id = init->node_id;
+    dn->capacity = init->capacity;
+
     LOGD(dn->node_id, "received node id=%d", dn->node_id);
-
-    if (read(dn->sock_fd, &dn->capacity, sizeof(dn->capacity)) != sizeof(dn->capacity)) {
-        return DN_FAIL;
-    }
     LOGD(dn->node_id, "received capacity=%zu", dn->capacity);
-
-    int ack = 1;
-    write(dn->sock_fd, &ack, sizeof(ack));
-    LOGD(dn->node_id, "sent ack");
 
     snprintf(dn->dir_path, sizeof(dn->dir_path), "dn_%d", dn->node_id);
     mkdir(dn->dir_path, 0755);
@@ -50,8 +49,84 @@ DNStatus datanode_write_block(int block_index, void * buffer)
     return DN_FAIL;
 }
 
-DNStatus datanode_service_loop()
+DNStatus datanode_exit(int * sockfd)
+{   
+    *sockfd = dn->sock_fd;
+    if (dn) {
+        free(dn);
+    }
+    return DN_SUCCESS;
+}
+
+DNStatus datanode_service_loop(int sock_fd)
 {
-    while (1) {}
-    return DN_FAIL;
+    while (1) {
+        DNCommand cmd;
+        void *payload = NULL;
+        size_t payload_size = 0;
+
+        if (dn_recv_command(sock_fd, &cmd, &payload, &payload_size) == -1) {
+            if (payload) free(payload);
+            return DN_FAIL;
+        }
+
+        DNStatus status;
+
+        switch(cmd) {
+            case DN_INIT:
+                status = datanode_init(sock_fd, payload, payload_size);
+                dn_send_response(sock_fd, status, NULL, 0);
+                break;
+            case DN_ALLOC_BLOCK: {
+                int block_index;
+                status = datanode_alloc_block(&block_index);
+                dn_send_response(sock_fd, status, &block_index, sizeof(block_index));
+                break;
+            }
+            case DN_FREE_BLOCK: {
+                if (payload_size >= sizeof(int)) {
+                    int block_index;
+                    memcpy(&block_index, payload, sizeof(int));
+                    status = datanode_free_block(block_index);
+                    dn_send_response(sock_fd, status, NULL, 0);
+                } else {
+                    dn_send_response(sock_fd, DN_FAIL, NULL, 0);
+                }
+                break;
+            }
+            case DN_READ_BLOCK: {
+                if (payload_size >= sizeof(int)) {
+                    int block_index;
+                    memcpy(&block_index, payload, sizeof(int));
+                    char buffer[4096];
+                    status = datanode_read_block(block_index, buffer);
+                    dn_send_response(sock_fd, status, buffer, sizeof(buffer));
+                } else {
+                    dn_send_response(sock_fd, DN_FAIL, NULL, 0);
+                }
+                break;
+            }
+            case DN_WRITE_BLOCK: {
+                if (payload_size >= sizeof(int) + 4096) {
+                    int block_index;
+                    char buffer[4096];
+                    memcpy(&block_index, payload, sizeof(int));
+                    memcpy(buffer, (char*)payload + sizeof(int), 4096);
+                    status = datanode_write_block(block_index, buffer);
+                    dn_send_response(sock_fd, status, NULL, 0);
+                } else {
+                    dn_send_response(sock_fd, DN_FAIL, NULL, 0);
+                }
+                break;
+            }
+            case DN_EXIT:
+                int sockfd;
+                status = datanode_exit(&sockfd);
+                dn_send_response(sock_fd, status, NULL, 0);
+                if (payload) free(payload);
+                return DN_SUCCESS;
+        }
+        
+        if (payload) free(payload);
+    }
 }
