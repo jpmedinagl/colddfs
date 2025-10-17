@@ -31,6 +31,32 @@ DNStatus datanode_init(int sock_fd, void *payload, size_t payload_size)
 
 DNStatus datanode_alloc_block(int *block_index)
 {
+    if (dn->size + BLOCK_SIZE > dn->capacity) {
+        return DN_NO_SPACE;
+    }
+
+    char filepath[512];
+    snprintf(filepath, sizeof(filepath), "%s/block_%d.dat", dn->dir_path, *block_index);
+    
+    // FILE *f = fopen(filepath, "wb");
+    // if (!f) {
+    //     perror("fopen");
+    //     return DN_FAIL;
+    // }
+
+    // size_t block_size = BLOCK_SIZE;
+    // void *buffer = calloc(1, block_size);
+    // if (!buffer) {
+    //     fclose(f);
+    //     return DN_FAIL;
+    // }
+
+    // fwrite(buffer, 1, block_size, f);
+    // free(buffer);
+    // fclose(f);
+
+    dn->size += BLOCK_SIZE;
+    
     return DN_FAIL;
 }
 
