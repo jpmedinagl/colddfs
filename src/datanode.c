@@ -55,7 +55,18 @@ DNStatus datanode_alloc_block(int block_index)
 
 DNStatus datanode_free_block(int block_index)
 {
-    return DN_FAIL;
+    char filepath[512];
+    snprintf(filepath, sizeof(filepath), "%s/block_%d.dat", dn->dir_path, block_index);
+
+    if (unlink(filepath) != 0) {
+        perror("unlink");
+        return DN_FAIL;
+    }
+
+    dn->size -= BLOCK_SIZE;
+
+    LOGD(dn->node_id, "block with id=%d deleted", block_index);
+    return DN_SUCCESS;
 }
 
 DNStatus datanode_read_block(int block_index, void * buffer)
