@@ -1,4 +1,5 @@
 #include "datanode.h"
+#include "communication.h"
 
 DataNode * dn = NULL;
 
