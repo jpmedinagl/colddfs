@@ -29,6 +29,7 @@ MDNStatus initialize_datanodes()
             free(md->connections);
             free(md->nodes);
             free(md);
+            alloc_policy_end();
             datanode_service_loop(fds[1]);
             exit(0);
         } else {
@@ -48,7 +49,9 @@ MDNStatus connect_datanodes()
 
     LOGM("Connecting %d data nodes", md->num_nodes);
     for (int i = 0; i < md->num_nodes; i++) {
-        DNInitPayload payload = { .node_id = i, .capacity = node_capacity };
+        DNInitPayload payload = {0};
+        payload.node_id = i;
+        payload.capacity= node_capacity;
         
         if (md_send_command(md->connections[i].sock_fd, DN_INIT, &payload, sizeof(payload)) != 0) {
             perror("Failed to send DN_INIT");
@@ -94,6 +97,7 @@ MDNStatus metadatanode_init(int num_dns, size_t capacity, const char *policy_nam
         return MDN_FAIL;
     }
     
+    MDNStatus status;
     status = initialize_datanodes(md);
     if (status != MDN_SUCCESS)
         return status;
@@ -144,6 +148,8 @@ MDNStatus metadatanode_exit()
     
     free(md);
     md = NULL;
+    
+    alloc_policy_end();
 
     return MDN_SUCCESS;
 }
