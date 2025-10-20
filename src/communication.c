@@ -27,7 +27,10 @@ size_t recv_all(int sock_fd, void *buf, size_t len) {
 }
 
 size_t md_send_command(int sock_fd, DNCommand cmd, void *payload, size_t payload_size) {
-    DNHeader header = {cmd, payload_size};
+    // DNHeader header = {cmd, payload_size};
+    DNHeader header = {0};
+    header.cmd = cmd;
+    header.payload_size = payload_size;
     
     if (send_all(sock_fd, &header, sizeof(header)) != sizeof(header)) 
         return -1;
@@ -63,7 +66,9 @@ size_t dn_recv_command(int sock_fd, DNCommand *cmd, void **payload, size_t *payl
 }
 
 size_t dn_send_response(int sock_fd, DNStatus status, void *payload, size_t payload_size) {
-    DNResponseHeader header = {status, payload_size};
+    DNResponseHeader header = {0};
+    header.status = status;
+    header.payload_size = payload_size;
     
     if (send_all(sock_fd, &header, sizeof(header)) != sizeof(header))
         return -1;
