@@ -15,4 +15,5 @@ add_executable(workload
     src/allocationpolicy.c
     src/rand.c
     src/roundrobin.c
+    src/bitmap.c
 )

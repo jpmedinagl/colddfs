@@ -6,6 +6,8 @@
 #include <sys/socket.h>
 #include <sys/wait.h>
 
+#include "bitmap.h"
+
 #define LOGM(fmt, ...) \
     do { \
         printf("[MetadataNode] " fmt "\n", ##__VA_ARGS__); \
@@ -42,6 +44,9 @@ typedef struct {
 
 typedef struct {
     int fs_capacity;
+    size_t num_blocks;
+    bitmap_t *bitmap;
+    size_t free_blocks;
     
     int num_files;
     FileEntry * files;
@@ -70,5 +75,7 @@ MDNStatus metadatanode_alloc_block(int * block_index, int * node_id);
 MDNStatus metadatanode_read_block(int fid, int block_index, void * buffer);
 
 MDNStatus metadatanode_write_block(int fid, int block_index, void * buffer);
+
+MDNStatus metadatanode_end(void);
 
 #endif // METADATA_NODE_H

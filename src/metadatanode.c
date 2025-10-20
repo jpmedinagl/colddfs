@@ -26,10 +26,9 @@ MDNStatus initialize_datanodes()
         if (pid == 0) {
             // child
             close(fds[0]);
-            free(md->connections);
-            free(md->nodes);
-            free(md);
-            alloc_policy_end();
+            
+            metadatanode_end();
+            
             datanode_service_loop(fds[1]);
             exit(0);
         } else {
@@ -82,9 +81,14 @@ MDNStatus metadatanode_init(int num_dns, size_t capacity, const char *policy_nam
 {   
     md = malloc(sizeof(MetadataNode));
 
-    MDNStatus status;
-
     md->fs_capacity = capacity;
+    md->num_blocks = (capacity + BLOCK_SIZE - 1) / BLOCK_SIZE;
+
+    size_t bits_per_word = sizeof(size_t) * CHAR_BIT;
+    uint32_t nwords = (md->num_blocks + bits_per_word - 1) / bits_per_word;
+    md->bitmap = malloc(sizeof(bitmap_t) * nwords);
+    bitmap_init(md->bitmap, md->num_blocks);
+
     md->num_files = 0;
     md->files = NULL;
 
@@ -140,16 +144,7 @@ MDNStatus metadatanode_exit()
         close(md->connections[i].sock_fd);
     }
 
-    free(md->connections);
-    md->connections = NULL;
-
-    free(md->nodes);
-    md->nodes = NULL;
-    
-    free(md);
-    md = NULL;
-    
-    alloc_policy_end();
+    metadatanode_end();
 
     return MDN_SUCCESS;
 }
@@ -187,4 +182,23 @@ MDNStatus metadatanode_read_block(int fid, int block_index, void * buffer)
 MDNStatus metadatanode_write_block(int fid, int block_index, void * buffer) 
 {
     return MDN_FAIL;
+}
+
+MDNStatus metadatanode_end(void)
+{
+    free(md->bitmap);
+    md->bitmap = NULL;
+
+    free(md->connections);
+    md->connections = NULL;
+
+    free(md->nodes);
+    md->nodes = NULL;
+    
+    free(md);
+    md = NULL;
+    
+    alloc_policy_end();
+
+    return MDN_SUCCESS;
 }
