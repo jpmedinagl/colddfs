@@ -12,7 +12,7 @@ typedef enum {
     DN_FREE_BLOCK,
     DN_READ_BLOCK,
     DN_WRITE_BLOCK,
-    DN_EXIT
+    DN_EXIT,
 } DNCommand;
 
 typedef enum {
@@ -41,10 +41,10 @@ typedef struct {
     int block_index;
 } DNBlockIndexPayload;
 
-// typedef struct {
-//     int block_index;
-//     char buffer[4096]; // for read/write
-// } DNBlockPayload;
+typedef struct {
+    int block_index;
+    char buffer[4096]; // for read/write
+} DNBlockPayload;
 
 size_t send_all(int sock_fd, const void *buf, size_t len);
 

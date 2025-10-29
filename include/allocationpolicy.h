@@ -6,6 +6,8 @@
 #include <time.h>
 #include <string.h>
 
+extern struct AllocPolicy *policy;
+
 #define ALLOCPOLICIES \
     P(rand) \
     P(roundrobin) \
