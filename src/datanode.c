@@ -127,8 +127,10 @@ DNStatus datanode_exit(int * sockfd)
 
 DNStatus datanode_service_loop(int sock_fd)
 {
+    dn = malloc(sizeof(DataNode));
+
     while (1) {
-        DNCommand cmd;
+        DNCommand cmd = DN_EXIT;
         void *payload = NULL;
         size_t payload_size = 0;
 
@@ -136,6 +138,8 @@ DNStatus datanode_service_loop(int sock_fd)
             if (payload) free(payload);
             return DN_FAIL;
         }
+
+        LOGD(dn->node_id, "Command %d", cmd);
 
         DNStatus status;
 
@@ -173,8 +177,15 @@ DNStatus datanode_service_loop(int sock_fd)
                         break;
                     }
 
+                    LOGD(dn->node_id, "Received read request for block %d", block_index);
+
                     status = datanode_read_block(block_index, buffer);
-                    dn_send_response(sock_fd, status, buffer, sizeof(buffer));
+                    LOGD(dn->node_id, "Block %d read %s",
+                        block_index, status == DN_SUCCESS ? "succeeded" : "failed");
+
+                    LOGD(dn->node_id, "%s", (char *)buffer);
+                    
+                    dn_send_response(sock_fd, status, buffer, BLOCK_SIZE);
                     free(buffer);
                 } else {
                     dn_send_response(sock_fd, DN_FAIL, NULL, 0);
@@ -183,18 +194,22 @@ DNStatus datanode_service_loop(int sock_fd)
             }
             case DN_WRITE_BLOCK: {
                 if (payload_size >= sizeof(int) + 4096) {
-                    int block_index;
+                    DNBlockPayload *p = (DNBlockPayload *)payload;
+                    int block_index = p->block_index;
+
                     void *buffer = malloc(BLOCK_SIZE);
-                    
                     if (!buffer) {
                         dn_send_response(sock_fd, DN_FAIL, NULL, 0);
                         break;
                     }
 
-                    memcpy(&block_index, payload, sizeof(int));
-                    memcpy(buffer, (char*)payload + sizeof(int), BLOCK_SIZE);
-                    
+                    memcpy(buffer, p->buffer, BLOCK_SIZE);
+
+                    LOGD(dn->node_id, "Received write request for block %d", block_index);
                     status = datanode_write_block(block_index, buffer);
+                    LOGD(dn->node_id, "Block %d write %s",
+                        block_index, status == DN_SUCCESS ? "succeeded" : "failed");
+
                     dn_send_response(sock_fd, status, NULL, 0);
                 } else {
                     dn_send_response(sock_fd, DN_FAIL, NULL, 0);

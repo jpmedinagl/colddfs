@@ -55,18 +55,18 @@ typedef struct {
     DataNode * nodes;
     NodeConnection * connections;
 
-    AllocPolicy * policy;
+    // AllocPolicy * policy;
 } MetadataNode;
 
 MDNStatus metadatanode_init(int num_dns, size_t capacity, const char *policy_name);
 
 MDNStatus metadatanode_exit();
 
-MDNStatus metadatanode_create_file(size_t file_size, int * fid);
+MDNStatus metadatanode_create_file(const char * filename, size_t file_size, int * fid);
 
 MDNStatus metadatanode_find_file(const char * filename, int * fid);
 
-MDNStatus metadatanode_read_file(int fid, void * buffer, size_t * file_size);
+MDNStatus metadatanode_read_file(int fid, void ** buffer, size_t * file_size);
 
 MDNStatus metadatanode_write_file(int fid, void * buffer, size_t buffer_size);
 
