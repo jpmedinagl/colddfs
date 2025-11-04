@@ -19,8 +19,7 @@ DNStatus datanode_init(int sock_fd, void *payload, size_t payload_size)
     dn->node_id = init->node_id;
     dn->capacity = init->capacity;
 
-    LOGD(dn->node_id, "received node id=%d", dn->node_id);
-    LOGD(dn->node_id, "received capacity=%zu", dn->capacity);
+    LOGD(dn->node_id, "received node id=%d capacity=%zu", dn->node_id, dn->capacity);
 
     snprintf(dn->dir_path, sizeof(dn->dir_path), "dn_%d", dn->node_id);
     mkdir(dn->dir_path, 0755);
@@ -32,8 +31,10 @@ DNStatus datanode_init(int sock_fd, void *payload, size_t payload_size)
 
 DNStatus datanode_alloc_block(int block_index)
 {
+    LOGD(dn->node_id, "Allocating block %d (current size=%zu, capacity=%zu)", block_index, dn->size, dn->capacity);
+
     if (dn->size + BLOCK_SIZE > dn->capacity) {
-        LOGD(dn->node_id, "no more space in this node");
+        LOGD(dn->node_id, "ERROR: No space for block %d (would exceed capacity)", block_index);
         return DN_NO_SPACE;
     }
 
@@ -42,14 +43,16 @@ DNStatus datanode_alloc_block(int block_index)
     
     FILE *f = fopen(filepath, "wb");
     if (!f) {
+        LOGD(dn->node_id, "ERROR: Failed to create block file '%s'", filepath);
         perror("fopen");
         return DN_FAIL;
     }
     fclose(f);
 
     dn->size += BLOCK_SIZE;
+
+    LOGD(dn->node_id, "Block %d created successfully (new size=%zu)", block_index, dn->size);
     
-    LOGD(dn->node_id, "block with id=%d created", block_index);    
     return DN_SUCCESS;
 }
 
@@ -128,6 +131,7 @@ DNStatus datanode_exit(int * sockfd)
 DNStatus datanode_service_loop(int sock_fd)
 {
     dn = malloc(sizeof(DataNode));
+    memset(dn, 0, sizeof(DataNode));
 
     while (1) {
         DNCommand cmd = DN_EXIT;
@@ -193,7 +197,7 @@ DNStatus datanode_service_loop(int sock_fd)
                 break;
             }
             case DN_WRITE_BLOCK: {
-                if (payload_size >= sizeof(int) + 4096) {
+                if (payload_size >= sizeof(int) + BLOCK_SIZE) {
                     DNBlockPayload *p = (DNBlockPayload *)payload;
                     int block_index = p->block_index;
 
@@ -211,6 +215,7 @@ DNStatus datanode_service_loop(int sock_fd)
                         block_index, status == DN_SUCCESS ? "succeeded" : "failed");
 
                     dn_send_response(sock_fd, status, NULL, 0);
+                    free(buffer);
                 } else {
                     dn_send_response(sock_fd, DN_FAIL, NULL, 0);
                 }

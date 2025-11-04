@@ -6,7 +6,7 @@
 int main(void) {
     printf("Hello, CMake C project!\n");
 
-    metadatanode_init(1, 3 * BLOCK_SIZE, "roundrobin");
+    metadatanode_init(2, 3 * BLOCK_SIZE, "roundrobin");
 
     int fid;
     metadatanode_create_file("hello.c", 256, &fid);
@@ -15,8 +15,7 @@ int main(void) {
     memset(wbuffer, 0, BLOCK_SIZE);
     wbuffer[BLOCK_SIZE - 1] = '\0';
 
-
-    const char *msg = "Hello, metadata node!";
+    const char *msg = "Hello, metadata node!\nI love you!";
     strncpy(wbuffer, msg, BLOCK_SIZE - 1);
     
     metadatanode_write_block(fid, 0, wbuffer);

@@ -11,7 +11,7 @@ extern struct AllocPolicy *policy;
 #define ALLOCPOLICIES \
     P(rand) \
     P(roundrobin) \
-    // P(lu)
+    P(leastloaded) \
 
 #define P(name) \
     int name##_init(); \

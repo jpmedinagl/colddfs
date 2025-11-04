@@ -12,6 +12,7 @@ int roundrobin_init()
 {
     RRState *s = malloc(sizeof(RRState));
     if (!s) return -1;
+    if (md->num_nodes < 1) return -1;
     s->last_index = -1;
     policy->state = s;
     return 0;
@@ -27,6 +28,8 @@ int roundrobin_allocate_block(int *node_index)
 
 void roundrobin_destroy() 
 {
-    free(policy->state);
-    policy->state = NULL;
+    if (policy->state) {
+		free(policy->state);
+		policy->state = NULL;
+	}
 }

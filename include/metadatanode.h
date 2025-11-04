@@ -10,7 +10,7 @@
 
 #define LOGM(fmt, ...) \
     do { \
-        printf("[MetadataNode] " fmt "\n", ##__VA_ARGS__); \
+        printf("[MetaDtNode] " fmt "\n", ##__VA_ARGS__); \
         fflush(stdout); \
     } while (0)
 
@@ -71,6 +71,8 @@ MDNStatus metadatanode_read_file(int fid, void ** buffer, size_t * file_size);
 MDNStatus metadatanode_write_file(int fid, void * buffer, size_t buffer_size);
 
 MDNStatus metadatanode_alloc_block(int * block_index, int * node_id);
+
+MDNStatus metadatanode_dealloc_block(int block_index, int node_id);
 
 MDNStatus metadatanode_read_block(int fid, int block_index, void * buffer);
 

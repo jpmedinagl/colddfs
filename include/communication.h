@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <stdio.h>
+#include <errno.h>
 
 typedef enum {
     DN_INIT,
@@ -46,16 +48,16 @@ typedef struct {
     char buffer[4096]; // for read/write
 } DNBlockPayload;
 
-size_t send_all(int sock_fd, const void *buf, size_t len);
+ssize_t send_all(int sock_fd, const void *buf, size_t len);
 
-size_t recv_all(int sock_fd, void *buf, size_t len);
+ssize_t recv_all(int sock_fd, void *buf, size_t len);
 
-size_t md_send_command(int sock_fd, DNCommand cmd, void *payload, size_t payload_size);
+ssize_t md_send_command(int sock_fd, DNCommand cmd, void *payload, size_t payload_size);
 
-size_t md_recv_response(int sock_fd, DNStatus *status, void **payload, size_t *payload_size);
+ssize_t md_recv_response(int sock_fd, DNStatus *status, void **payload, size_t *payload_size);
 
-size_t dn_recv_command(int sock_fd, DNCommand *cmd, void **payload, size_t *payload_size);
+ssize_t dn_recv_command(int sock_fd, DNCommand *cmd, void **payload, size_t *payload_size);
 
-size_t dn_send_response(int sock_fd, DNStatus status, void *payload, size_t payload_size);
+ssize_t dn_send_response(int sock_fd, DNStatus status, void *payload, size_t payload_size);
 
 #endif // COMMUNICATION_H
