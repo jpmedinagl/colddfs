@@ -408,7 +408,7 @@ MDNStatus metadatanode_dealloc_block(int block_index)
         return MDN_FAIL;
     }
 
-	md->blocks_free[node_id]--;
+	md->blocks_free[node_id]++;
 
     LOGM("===================================================================\n");
 
