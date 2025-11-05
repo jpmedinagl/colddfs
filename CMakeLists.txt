@@ -5,6 +5,9 @@ project(colddfs C)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -O2")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -O0 -g")
+
 include_directories(${CMAKE_SOURCE_DIR}/include)
 
 # -------
@@ -40,4 +43,11 @@ foreach(WORKLOAD_SRC ${WORKLOAD_SRCS})
 endforeach()
 
 # add_custom_target(work DEPENDS ${WORKLOAD_TARGETS})
+
+set(DN_DIRS "dn_*")
+
+add_custom_target(extra_clean
+	COMMAND /bin/sh -c "rm -rf ${CMAKE_CURRENT_BINARY_DIR}/${DN_DIRS}"
+	COMMENT "Removing ${DN_DIRS} directories"
+)
 
