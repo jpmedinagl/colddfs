@@ -5,7 +5,6 @@ DataNode * dn = NULL;
 
 DNStatus datanode_init(int sock_fd, void *payload, size_t payload_size)
 {
-    dn = malloc(sizeof(DataNode));
     dn->sock_fd = sock_fd;
 
     if (payload_size < sizeof(int) + sizeof(size_t)) {
