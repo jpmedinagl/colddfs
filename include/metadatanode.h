@@ -26,15 +26,10 @@ typedef enum {
 } MDNStatus;
 
 typedef struct {
-    int block_id;
-    int data_node_id;
-} BlockLocation;
-
-typedef struct {
     int fid;
     char * filename;
     int num_blocks;
-    BlockLocation * blocks;
+    int * blocks;
 } FileEntry;
 
 typedef struct {
@@ -45,15 +40,17 @@ typedef struct {
 typedef struct {
     int fs_capacity;
     size_t num_blocks;
-    bitmap_t *bitmap;
     size_t free_blocks;
-    
+	bitmap_t *bitmap;
+	int * block_mapping;
+
     int num_files;
     FileEntry * files;
 
     int num_nodes;
     DataNode * nodes;
     NodeConnection * connections;
+	int * blocks_free;
 
     // AllocPolicy * policy;
 } MetadataNode;
@@ -72,11 +69,11 @@ MDNStatus metadatanode_write_file(int fid, void * buffer, size_t buffer_size);
 
 MDNStatus metadatanode_alloc_block(int * block_index, int * node_id);
 
-MDNStatus metadatanode_dealloc_block(int block_index, int node_id);
+MDNStatus metadatanode_dealloc_block(int block_index);
 
-MDNStatus metadatanode_read_block(int fid, int block_index, void * buffer);
+MDNStatus metadatanode_read_block(int fid, int file_index, void * buffer);
 
-MDNStatus metadatanode_write_block(int fid, int block_index, void * buffer);
+MDNStatus metadatanode_write_block(int fid, int file_index, void * buffer);
 
 MDNStatus metadatanode_end(void);
 
