@@ -6,7 +6,7 @@
 int main(void) {
     printf("Hello, CMake C project!\n");
 
-    metadatanode_init(2, 3 * BLOCK_SIZE, "roundrobin");
+    metadatanode_init(1, 3 * BLOCK_SIZE, "roundrobin");
 
     int fid;
     metadatanode_create_file("hello.c", 256, &fid);
