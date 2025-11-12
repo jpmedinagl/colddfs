@@ -22,6 +22,8 @@ set(LIB_SRCS
 	src/rand.c
     src/roundrobin.c
 	src/leastloaded.c
+    src/fileaware.c
+    src/weightedroundrobin.c
 )
 
 add_library(colddfs STATIC ${LIB_SRCS})
@@ -40,6 +42,28 @@ foreach(WORKLOAD_SRC ${WORKLOAD_SRCS})
     target_link_libraries(${WORKLOAD_NAME} PRIVATE colddfs)
     target_include_directories(${WORKLOAD_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/include)
     list(APPEND WORKLOAD_TARGETS ${WORKLOAD_NAME})
+endforeach()
+
+# ----------------------
+# Experiments
+# ----------------------
+set(EXP_SRCS
+    exp/rand.c
+    exp/roundrobin.c
+    exp/leastloaded.c
+    exp/fileaware.c
+    exp/weightedroundrobin.c
+
+    exp/medium_file.c
+)
+set(EXP_TARGETS "")
+
+foreach(EXP_SRC ${EXP_SRCS})
+    get_filename_component(EXP_NAME ${EXP_SRC} NAME_WE)
+    add_executable(${EXP_NAME} ${EXP_SRC})
+    target_link_libraries(${EXP_NAME} PRIVATE colddfs)
+    target_include_directories(${EXP_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/include)
+    list(APPEND EXP_TARGETS ${EXP_NAME})
 endforeach()
 
 # add_custom_target(work DEPENDS ${WORKLOAD_TARGETS})
