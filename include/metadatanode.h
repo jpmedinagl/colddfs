@@ -16,6 +16,7 @@
 
 typedef struct DataNode DataNode;
 typedef struct AllocPolicy AllocPolicy;
+typedef struct AllocContext AllocContext;
 
 typedef enum {
     MDN_SUCCESS = 0,
@@ -67,7 +68,7 @@ MDNStatus metadatanode_read_file(int fid, void ** buffer, size_t * file_size);
 
 MDNStatus metadatanode_write_file(int fid, void * buffer, size_t buffer_size);
 
-MDNStatus metadatanode_alloc_block(int * block_index, int * node_id);
+MDNStatus metadatanode_alloc_block(AllocContext ctx, int * block_index, int * node_id);
 
 MDNStatus metadatanode_dealloc_block(int block_index);
 
