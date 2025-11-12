@@ -216,9 +216,13 @@ MDNStatus metadatanode_create_file(const char * filename, size_t file_size, int 
         return MDN_FAIL;
     }
 
+	AllocContext ctx = {
+        .file_blocks = blocks_needed,
+    };
+
     for (int i = 0; i < blocks_needed; i++) {
         int blk, node;
-        if (metadatanode_alloc_block(&blk, &node) != MDN_SUCCESS) {
+        if (metadatanode_alloc_block(ctx, &blk, &node) != MDN_SUCCESS) {
             LOGM("ERROR: Failed to allocate block %d for file '%s'", i, filename);
             for (int j = 0; j < i; j++) {
                 int prev = new_file->blocks[j];
@@ -286,6 +290,10 @@ MDNStatus metadatanode_write_file(int fid, void * buffer, size_t buffer_size)
     FileEntry * file = &md->files[fid];
     size_t needed_blocks = (buffer_size + BLOCK_SIZE - 1) / BLOCK_SIZE;
 
+	AllocContext ctx = {
+		.file_blocks = needed_blocks
+	};
+
     // allocate more blocks for file
     if (needed_blocks > file->num_blocks) {
         // size_t extra_blocks = needed_blocks - file->num_blocks;
@@ -295,7 +303,7 @@ MDNStatus metadatanode_write_file(int fid, void * buffer, size_t buffer_size)
 
         for (size_t i = file->num_blocks; i < needed_blocks; i++) {
             int blk, node;
-            if (metadatanode_alloc_block(&blk, &node) != MDN_SUCCESS)
+            if (metadatanode_alloc_block(ctx, &blk, &node) != MDN_SUCCESS)
                 return MDN_NO_SPACE;
 
             file->blocks[i] = blk;
@@ -326,7 +334,7 @@ MDNStatus metadatanode_write_file(int fid, void * buffer, size_t buffer_size)
     return MDN_SUCCESS;
 }
 
-MDNStatus metadatanode_alloc_block(int * block_index, int * node_id)
+MDNStatus metadatanode_alloc_block(AllocContext ctx, int * block_index, int * node_id)
 {
     LOGM("===================================================================");
 
@@ -339,7 +347,7 @@ MDNStatus metadatanode_alloc_block(int * block_index, int * node_id)
     md->free_blocks--;
 
     int data_idx;
-    if (policy->allocate_block(&data_idx) != 0) {
+    if (policy->allocate_block(ctx, &data_idx) != 0) {
         bitmap_free(md->bitmap, md->num_blocks, blk);
         md->free_blocks++;
         LOGM("ERROR: Policy failed to allocate block");

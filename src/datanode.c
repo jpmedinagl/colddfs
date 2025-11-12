@@ -40,13 +40,20 @@ DNStatus datanode_alloc_block(int block_index)
     char filepath[512];
     snprintf(filepath, sizeof(filepath), "%s/block_%d.dat", dn->dir_path, block_index);
     
-    FILE *f = fopen(filepath, "wb");
-    if (!f) {
+    int fd = open(filepath, O_CREAT | O_WRONLY, 0644);
+    if (!fd) {
         LOGD(dn->node_id, "ERROR: Failed to create block file '%s'", filepath);
-        perror("fopen");
+        perror("open");
         return DN_FAIL;
     }
-    fclose(f);
+
+    if (ftruncate(fd, BLOCK_SIZE) == -1) {
+        perror("ftruncate");
+        close(fd);
+        return DN_FAIL;
+    }
+
+    close(fd);
 
     dn->size += BLOCK_SIZE;
 

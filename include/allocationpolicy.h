@@ -8,14 +8,20 @@
 
 extern struct AllocPolicy *policy;
 
+typedef struct AllocContext {
+	size_t file_blocks;
+} AllocContext;
+
 #define ALLOCPOLICIES \
     P(rand) \
     P(roundrobin) \
     P(leastloaded) \
+	P(fileaware) \
+    P(weightedroundrobin) \
 
 #define P(name) \
     int name##_init(); \
-    int name##_allocate_block(int *node_index); \
+    int name##_allocate_block(AllocContext ctx, int *node_index); \
     void name##_destroy();
     ALLOCPOLICIES
 #undef P
@@ -24,7 +30,7 @@ typedef struct AllocPolicy {
     const char *name;
 
     int (*init)(void);
-    int (*allocate_block)(int *node_index);
+    int (*allocate_block)(AllocContext ctx, int *node_index);
     void (*destroy)();
 
     void *state;
