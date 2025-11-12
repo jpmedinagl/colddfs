@@ -6,14 +6,13 @@ extern AllocPolicy *policy;
 
 int leastloaded_init()
 {
-	if (md->num_nodes < 1) {
-		return -1;
-	}
+	if (md->num_nodes < 1) return -1;
     return 0;
 }
 
-int leastloaded_allocate_block(int *node_index)
+int leastloaded_allocate_block(AllocContext ctx, int *node_index)
 {
+	(void)ctx;
     int least_loaded = -1;
 	for (int i = 0; i < md->num_nodes; i++) {
 		if (md->blocks_free[i] < 0) {
