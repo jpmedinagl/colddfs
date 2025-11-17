@@ -6,16 +6,17 @@ MetadataNode * md = NULL;
 
 MDNStatus initialize_datanodes()
 {
-    md->connections = malloc(md->num_nodes * sizeof(NodeConnection));
-    if (!md->connections) return MDN_FAIL;
+	int total_blocks = md->num_blocks;
 
-	size_t node_capacity = md->fs_capacity / md->num_nodes;
-	int max_blocks_per_node = node_capacity / BLOCK_SIZE;
-
-	md->blocks_free = malloc(sizeof(int) * md->num_nodes);
+	int base = total_blocks / md->num_nodes;
+    int rem  = total_blocks % md->num_nodes;
 
     LOGM("Initializing %d data nodes", md->num_nodes);
     for (int i = 0; i < md->num_nodes; i++) {
+		int blocks_for_node = base + (i < rem ? 1 : 0);
+		md->blocks_per_node[i] = blocks_for_node;
+        md->blocks_free[i] = blocks_for_node;
+
         int fds[2];
         if (socketpair(AF_UNIX, SOCK_STREAM, 0, fds) != 0) {
             perror("socketpair failed");
@@ -41,7 +42,6 @@ MDNStatus initialize_datanodes()
             close(fds[1]);
             md->connections[i].pid = pid;
             md->connections[i].sock_fd = fds[0];
-			md->blocks_free[i] = max_blocks_per_node;
         }
     }
 
@@ -52,13 +52,11 @@ MDNStatus connect_datanodes()
 {
     LOGM("===================================================================");
 
-    size_t node_capacity = md->fs_capacity / md->num_nodes;
-
     LOGM("Connecting %d data nodes", md->num_nodes);
     for (int i = 0; i < md->num_nodes; i++) {
         DNInitPayload payload = {0};
         payload.node_id = i;
-        payload.capacity= node_capacity;
+        payload.capacity= md->blocks_per_node[i] * BLOCK_SIZE;
         
         if (md_send_command(md->connections[i].sock_fd, DN_INIT, &payload, sizeof(payload)) != 0) {
             perror("Failed to send DN_INIT");
@@ -117,6 +115,12 @@ MDNStatus metadatanode_init(int num_dns, size_t capacity, const char *policy_nam
     md->num_nodes = num_dns;
     md->nodes = malloc(md->num_nodes * sizeof(DataNode));
     if (!md->nodes) return MDN_FAIL;
+
+	md->connections = malloc(md->num_nodes * sizeof(NodeConnection));
+    if (!md->connections) return MDN_FAIL;
+	
+	md->blocks_per_node = malloc(sizeof(int) * md->num_nodes);
+	md->blocks_free = malloc(sizeof(int) * md->num_nodes);
 
     if (!alloc_policy_init(policy_name)) {
         LOGM("ERROR: Failed to initialize allocation policy '%s'", policy_name);
@@ -265,6 +269,88 @@ MDNStatus metadatanode_find_file(const char * filename, int * fid)
         }
     }
     return MDN_FAIL;
+}
+
+MDNStatus metadatanode_truncate_file(int fid, size_t new_size)
+{
+	if (fid < 0 || fid >= md->num_files) {
+		return MDN_FAIL;
+	}
+
+	FileEntry *file = &md->files[fid];
+
+	size_t current_size = file->num_blocks * BLOCK_SIZE;
+	int blocks_new = (new_size + BLOCK_SIZE - 1) / BLOCK_SIZE;
+
+	LOGM("===================================================================");
+    LOGM("Truncating file fid=%d (%s) from %zu to %zu bytes", fid, file->filename, current_size, new_size);
+    LOGM("Current blocks: %d, New blocks: %d", file->num_blocks, blocks_new);
+
+	if (blocks_new > file->num_blocks) {
+		// need to allocate new blocks
+		int blocks_needed = blocks_new - file->num_blocks;
+
+		int *new_blocks = realloc(file->blocks, sizeof(int) * blocks_new);
+        if (!new_blocks) {
+            return MDN_FAIL;
+        }
+		file->blocks = new_blocks;
+
+		AllocContext ctx = {
+			.file_blocks = blocks_new,
+		};
+
+		for (int i = 0; i < blocks_needed; i++) {
+			int blk, node;
+			if (metadatanode_alloc_block(ctx, &blk, &node) != MDN_SUCCESS) {
+				// in this case we don't free the file
+				LOGM("ERROR: Failed to allocate block %d for file '%s'", i, file->filename);
+				for (int j = file->num_blocks; j < file->num_blocks + i; j++) {
+                    metadatanode_dealloc_block(file->blocks[j]);
+                }
+				return MDN_NO_SPACE;
+			}
+			
+			int block_idx = file->num_blocks + i;
+			file->blocks[block_idx] = blk;
+			md->block_mapping[blk] = node;
+
+			LOGM("Allocated block %d (global id=%d) on node %d for file '%s'", block_idx, blk, node, file->filename);
+		}
+		
+		file->num_blocks = blocks_new;
+	} else if (blocks_new < file->num_blocks) {
+		// free file blocks
+		int blocks_to_remove = file->num_blocks - blocks_new;
+
+		for (int i = file->num_blocks - 1; i >= blocks_new; i--) {
+			int block_id = file->blocks[i];
+			if (metadatanode_dealloc_block(block_id) != MDN_SUCCESS) {
+                fprintf(stderr, "Warning: failed to dealloc block %d\n", block_id);
+                return MDN_FAIL;
+            }
+		}
+
+		file->num_blocks = blocks_new;
+
+		if (blocks_new > 0) {
+			int * new_blocks = realloc(file->blocks, sizeof(int) * blocks_new);
+			if (new_blocks) {
+				file->blocks = new_blocks;
+			}
+		} else {
+			// truncated to 0
+			free(file->blocks);
+			file->blocks = NULL;
+		}
+	} else {
+		LOGM("File size unchanged");
+	}
+
+	LOGM("Truncate complete: file now has %d blocks", file->num_blocks);
+    LOGM("===================================================================\n");
+
+	return MDN_SUCCESS;
 }
 
 MDNStatus metadatanode_read_file(int fid, void ** buffer, size_t * file_size)

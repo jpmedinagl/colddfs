@@ -51,6 +51,7 @@ typedef struct {
     int num_nodes;
     DataNode * nodes;
     NodeConnection * connections;
+	int * blocks_per_node;
 	int * blocks_free;
 
     // AllocPolicy * policy;
@@ -63,6 +64,8 @@ MDNStatus metadatanode_exit();
 MDNStatus metadatanode_create_file(const char * filename, size_t file_size, int * fid);
 
 MDNStatus metadatanode_find_file(const char * filename, int * fid);
+
+MDNStatus metadatanode_truncate_file(int fid, size_t new_size);
 
 MDNStatus metadatanode_read_file(int fid, void ** buffer, size_t * file_size);
 
