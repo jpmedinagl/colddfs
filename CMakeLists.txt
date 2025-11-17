@@ -55,6 +55,8 @@ set(EXP_SRCS
     exp/weightedroundrobin.c
 
     exp/medium_file.c
+
+	exp/truncation.c
 )
 set(EXP_TARGETS "")
 
