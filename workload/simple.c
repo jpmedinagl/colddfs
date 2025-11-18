@@ -31,7 +31,7 @@ int main(void) {
     printf("%.*s\n", (int)size, (char *)buffer);
     free(buffer);
     
-    metadatanode_exit();
+    metadatanode_exit(0);
     
     return 0;
 }
