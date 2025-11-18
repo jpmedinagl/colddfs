@@ -18,6 +18,7 @@ typedef struct AllocContext {
     P(leastloaded) \
 	P(fileaware) \
     P(weightedroundrobin) \
+	P(sequential) \
 
 #define P(name) \
     int name##_init(); \

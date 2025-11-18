@@ -47,6 +47,8 @@ int fileaware_allocate_block(AllocContext ctx, int *node_index)
 		return -1;
 	}
 
+	*node_index = least_loaded;
+
 	return 0;
 }
 

@@ -24,7 +24,7 @@ int test_init_and_exit() {
         return 0;
     }
     
-    status = metadatanode_exit();
+    status = metadatanode_exit(0);
     if (status != MDN_SUCCESS) {
         printf("Failed to exit metadata node\n");
         return 0;
@@ -43,7 +43,7 @@ int test_create_and_find_file() {
     MDNStatus status = metadatanode_create_file("testfile.txt", BLOCK_SIZE, &fid);
     if (status != MDN_SUCCESS) {
         printf("Failed to create file\n");
-        metadatanode_exit();
+        metadatanode_exit(0);
         return 0;
     }
     
@@ -53,13 +53,13 @@ int test_create_and_find_file() {
     status = metadatanode_find_file("testfile.txt", &found_fid);
     if (status != MDN_SUCCESS || found_fid != fid) {
         printf("Failed to find file\n");
-        metadatanode_exit();
+        metadatanode_exit(0);
         return 0;
     }
     
     printf("Found file with fid=%d\n", found_fid);
     
-    metadatanode_exit();
+    metadatanode_exit(0);
     return 1;
 }
 
@@ -81,7 +81,7 @@ int test_write_and_read_block() {
     MDNStatus status = metadatanode_write_block(fid, 0, write_buffer);
     if (status != MDN_SUCCESS) {
         printf("Failed to write block\n");
-        metadatanode_exit();
+        metadatanode_exit(0);
         return 0;
     }
     
@@ -92,7 +92,7 @@ int test_write_and_read_block() {
     status = metadatanode_read_block(fid, 0, read_buffer);
     if (status != MDN_SUCCESS) {
         printf("Failed to read block\n");
-        metadatanode_exit();
+        metadatanode_exit(0);
         return 0;
     }
     
@@ -101,13 +101,13 @@ int test_write_and_read_block() {
         printf("Data mismatch!\n");
         printf("Written: %s\n", write_buffer);
         printf("Read: %s\n", read_buffer);
-        metadatanode_exit();
+        metadatanode_exit(0);
         return 0;
     }
     
     printf("Data verified: %s\n", read_buffer);
     
-    metadatanode_exit();
+    metadatanode_exit(0);
     return 1;
 }
 
@@ -137,7 +137,7 @@ int test_write_and_read_file() {
     if (status != MDN_SUCCESS) {
         printf("Failed to write file\n");
         free(write_data);
-        metadatanode_exit();
+        metadatanode_exit(0);
         return 0;
     }
     
@@ -148,7 +148,7 @@ int test_write_and_read_file() {
     if (status != MDN_SUCCESS) {
         printf("Failed to read file\n");
         free(write_data);
-        metadatanode_exit();
+        metadatanode_exit(0);
         return 0;
     }
     
@@ -157,7 +157,7 @@ int test_write_and_read_file() {
         printf("File size mismatch: expected %d, got %zu\n", 3 * BLOCK_SIZE, file_size);
         free(write_data);
         free(read_data);
-        metadatanode_exit();
+        metadatanode_exit(0);
         return 0;
     }
     
@@ -165,7 +165,7 @@ int test_write_and_read_file() {
         printf("File data mismatch!\n");
         free(write_data);
         free(read_data);
-        metadatanode_exit();
+        metadatanode_exit(0);
         return 0;
     }
     
@@ -174,7 +174,7 @@ int test_write_and_read_file() {
     
     free(write_data);
     free(read_data);
-    metadatanode_exit();
+    metadatanode_exit(0);
     return 1;
 }
 
@@ -199,7 +199,7 @@ int test_multiple_files() {
         MDNStatus status = metadatanode_create_file(filenames[i], BLOCK_SIZE, &fids[i]);
         if (status != MDN_SUCCESS) {
             printf("Failed to create file %s\n", filenames[i]);
-            metadatanode_exit();
+            metadatanode_exit(0);
             return 0;
         }
         
@@ -210,7 +210,7 @@ int test_multiple_files() {
         status = metadatanode_write_block(fids[i], 0, buffer);
         if (status != MDN_SUCCESS) {
             printf("Failed to write to file %s\n", filenames[i]);
-            metadatanode_exit();
+            metadatanode_exit(0);
             return 0;
         }
     }
@@ -222,7 +222,7 @@ int test_multiple_files() {
         MDNStatus status = metadatanode_read_file(fids[i], &data, &size);
         if (status != MDN_SUCCESS) {
             printf("Failed to read file %s\n", filenames[i]);
-            metadatanode_exit();
+            metadatanode_exit(0);
             return 0;
         }
         
@@ -230,7 +230,7 @@ int test_multiple_files() {
         free(data);
     }
     
-    metadatanode_exit();
+    metadatanode_exit(0);
     return 1;
 }
 
@@ -258,7 +258,7 @@ int test_allocation_policies() {
             status = metadatanode_create_file(filename, BLOCK_SIZE, &fid);
             if (status != MDN_SUCCESS) {
                 printf("Failed to create file with policy %s\n", policies[p]);
-                metadatanode_exit();
+                metadatanode_exit(0);
                 return 0;
             }
             
@@ -271,7 +271,7 @@ int test_allocation_policies() {
         
         printf("Successfully created 5 files with policy %s\n", policies[p]);
         
-        metadatanode_exit();
+        metadatanode_exit(0);
     }
     
     return 1;
@@ -300,20 +300,20 @@ int test_capacity_limits() {
             break;
         } else {
             printf("Unexpected error when creating file %d\n", i);
-            metadatanode_exit();
+            metadatanode_exit(0);
             return 0;
         }
     }
     
     if (success_count != 5) {
         printf("Expected to create 5 files, but created %d\n", success_count);
-        metadatanode_exit();
+        metadatanode_exit(0);
         return 0;
     }
     
     printf("Capacity limit correctly enforced\n");
     
-    metadatanode_exit();
+    metadatanode_exit(0);
     return 1;
 }
 
@@ -328,7 +328,7 @@ int test_truncate_file() {
     MDNStatus status = metadatanode_create_file("trunctest.txt", 3 * BLOCK_SIZE, &fid);
     if (status != MDN_SUCCESS) {
         printf("Failed to create file\n");
-        metadatanode_exit();
+        metadatanode_exit(0);
         return 0;
     }
     
@@ -346,7 +346,7 @@ int test_truncate_file() {
     status = metadatanode_truncate_file(fid, BLOCK_SIZE);
     if (status != MDN_SUCCESS) {
         printf("Failed to truncate file\n");
-        metadatanode_exit();
+        metadatanode_exit(0);
         return 0;
     }
     
@@ -358,14 +358,14 @@ int test_truncate_file() {
     status = metadatanode_read_file(fid, &data, &size);
     if (status != MDN_SUCCESS) {
         printf("Failed to read truncated file\n");
-        metadatanode_exit();
+        metadatanode_exit(0);
         return 0;
     }
     
     if (size != BLOCK_SIZE) {
         printf("Truncated file has wrong size: %zu (expected %d)\n", size, BLOCK_SIZE);
         free(data);
-        metadatanode_exit();
+        metadatanode_exit(0);
         return 0;
     }
     
@@ -376,7 +376,7 @@ int test_truncate_file() {
     status = metadatanode_truncate_file(fid, 5 * BLOCK_SIZE);
     if (status != MDN_SUCCESS) {
         printf("Failed to grow file\n");
-        metadatanode_exit();
+        metadatanode_exit(0);
         return 0;
     }
     
@@ -387,14 +387,14 @@ int test_truncate_file() {
     if (status != MDN_SUCCESS || size != 5 * BLOCK_SIZE) {
         printf("Failed to verify grown file\n");
         if (data) free(data);
-        metadatanode_exit();
+        metadatanode_exit(0);
         return 0;
     }
     
     printf("File successfully grown to %zu bytes\n", size);
     free(data);
     
-    metadatanode_exit();
+    metadatanode_exit(0);
     return 1;
 }
 

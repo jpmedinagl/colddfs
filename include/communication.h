@@ -48,6 +48,10 @@ typedef struct {
     char buffer[4096]; // for read/write
 } DNBlockPayload;
 
+typedef struct {
+	int cleanup;
+} DNExitPayload;
+
 ssize_t send_all(int sock_fd, const void *buf, size_t len);
 
 ssize_t recv_all(int sock_fd, void *buf, size_t len);
