@@ -59,7 +59,7 @@ typedef struct {
 
 MDNStatus metadatanode_init(int num_dns, size_t capacity, const char *policy_name);
 
-MDNStatus metadatanode_exit();
+MDNStatus metadatanode_exit(int cleanup);
 
 MDNStatus metadatanode_create_file(const char * filename, size_t file_size, int * fid);
 

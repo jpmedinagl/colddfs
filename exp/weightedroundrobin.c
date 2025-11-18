@@ -37,7 +37,7 @@ int main(void) {
     create_write_file("third", 512, "Just\nwriting\nI\nlove\nyou\n!\nthird file\n");
     create_write_file("fourth", 512, "Just\nwriting\nI\nlove\nyou\n!\nfourth file\n");
     
-    metadatanode_exit();
+    metadatanode_exit(0);
     
     return 0;
 }

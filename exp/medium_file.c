@@ -37,7 +37,7 @@ int main(void) {
     write_file(fid, 0, "writing to block 0\n");
     write_file(fid, 1, "writing to block 1\n");
     
-    metadatanode_exit();
+    metadatanode_exit(0);
     
     return 0;
 }

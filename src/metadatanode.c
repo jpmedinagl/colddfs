@@ -141,7 +141,7 @@ MDNStatus metadatanode_init(int num_dns, size_t capacity, const char *policy_nam
     return connect_datanodes();
 }
 
-MDNStatus metadatanode_exit()
+MDNStatus metadatanode_exit(int cleanup)
 {
     if (!md || !md->connections) return MDN_FAIL;
     
@@ -152,8 +152,11 @@ MDNStatus metadatanode_exit()
         pid_t pid = md->connections[i].pid;
         if (pid > 0) {
             DNCommand cmd = DN_EXIT;
+			
+			DNExitPayload payload;
+			payload.cleanup = cleanup;
 
-            if (md_send_command(md->connections[i].sock_fd, cmd, NULL, 0) != 0) {
+            if (md_send_command(md->connections[i].sock_fd, cmd, &payload, sizeof(payload)) != 0) {
                 perror("Failed to send DN_EXIT");
                 return MDN_FAIL;
             }

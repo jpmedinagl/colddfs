@@ -24,6 +24,8 @@ set(LIB_SRCS
 	src/leastloaded.c
     src/fileaware.c
     src/weightedroundrobin.c
+	src/metric.c
+	src/sequential.c
 )
 
 add_library(colddfs STATIC ${LIB_SRCS})
@@ -33,13 +35,14 @@ add_library(colddfs STATIC ${LIB_SRCS})
 # ----------------------
 set(WORKLOAD_SRCS
     workload/simple.c
+	workload/fill.c
 )
 set(WORKLOAD_TARGETS "")
 
 foreach(WORKLOAD_SRC ${WORKLOAD_SRCS})
     get_filename_component(WORKLOAD_NAME ${WORKLOAD_SRC} NAME_WE)
     add_executable(${WORKLOAD_NAME} ${WORKLOAD_SRC})
-    target_link_libraries(${WORKLOAD_NAME} PRIVATE colddfs)
+    target_link_libraries(${WORKLOAD_NAME} PRIVATE colddfs m)
     target_include_directories(${WORKLOAD_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/include)
     list(APPEND WORKLOAD_TARGETS ${WORKLOAD_NAME})
 endforeach()

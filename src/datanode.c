@@ -124,13 +124,30 @@ DNStatus datanode_write_block(int block_index, void * buffer)
     return DN_SUCCESS;
 }
 
-DNStatus datanode_exit(int * sockfd)
+static int remove_callback(const char *fpath, const struct stat *sb,
+                           int typeflag, struct FTW *ftwbuf)
+{
+    int ret = remove(fpath);
+    if (ret) perror(fpath);
+    return ret;
+}
+
+DNStatus datanode_exit(int cleanup, int * sockfd)
 {   
     *sockfd = dn->sock_fd;
-    if (dn) {
+    
+	if (cleanup) {
+		if (dn->dir_path[0] != '\0') {
+			if (nftw(dn->dir_path, remove_callback, 64, FTW_DEPTH | FTW_PHYS) != 0) {
+				perror("nftw failed");
+			}
+		}
+	}
+
+	if (dn) {
         free(dn);
         dn = NULL;
-    }
+    }	
     return DN_SUCCESS;
 }
 
@@ -228,8 +245,10 @@ DNStatus datanode_service_loop(int sock_fd)
                 break;
             }
             case DN_EXIT:
+				DNExitPayload *p = (DNExitPayload *)payload;
+
                 int sockfd;
-                status = datanode_exit(&sockfd);
+                status = datanode_exit(p->cleanup, &sockfd);
                 dn_send_response(sock_fd, status, NULL, 0);
                 if (payload) free(payload);
                 return DN_SUCCESS;

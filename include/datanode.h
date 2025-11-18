@@ -3,6 +3,8 @@
 
 #define BLOCK_SIZE 4096
 
+#define _XOPEN_SOURCE 500
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -10,6 +12,7 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <ftw.h>
 
 #include "communication.h"
 
@@ -45,6 +48,6 @@ DNStatus datanode_read_block(int block_index, void * buffer);
 // Writing a block to its index
 DNStatus datanode_write_block(int block_index, void * buffer);
 
-DNStatus datanode_exit(int * sock_fd);
+DNStatus datanode_exit(int cleanup, int * sock_fd);
 
 #endif
