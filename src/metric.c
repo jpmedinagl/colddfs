@@ -39,7 +39,7 @@ SystemMetrics capture_metrics(double write_time_ms, double read_time_ms,
 {
     SystemMetrics m = {0};
     
-    m.timestamp_ms = get_time_ms();
+    // m.timestamp_ms = get_time_ms();
     
     m.blocks_used = md->num_blocks - md->free_blocks;
     m.blocks_free = md->free_blocks;
@@ -89,16 +89,16 @@ void export_metrics_csv(const char *filename, SystemMetrics *metrics,
         return;
     }
     
-	fprintf(f, "policy,timestamp_ms,fill_pct,blocks_used,blocks_free,"
+	fprintf(f, "policy,fill_pct,blocks_used,blocks_free,"
                "load_imbalance,load_std_dev,max_blocks,min_blocks,"
                "num_files,write_count,read_count,avg_write_latency_ms,"
                "avg_read_latency_ms,metadata_bytes\n");
     
     for (int i = 0; i < count; i++) {
         SystemMetrics *m = &metrics[i];
-        fprintf(f, "%s,%.2f,%d,%zu,%zu,%.6f,%.4f,%d,%d,%d,%d,%d,%.6f,%.6f,%zu\n",
+        fprintf(f, "%s,%d,%zu,%zu,%.6f,%.4f,%d,%d,%d,%d,%d,%.6f,%.6f,%zu\n",
                 policy_name,
-                m->timestamp_ms,
+                // m->timestamp_ms,
                 m->fill_percentage,
                 m->blocks_used,
                 m->blocks_free,

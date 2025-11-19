@@ -36,6 +36,10 @@ add_library(colddfs STATIC ${LIB_SRCS})
 set(WORKLOAD_SRCS
     workload/simple.c
 	workload/fill.c
+	workload/mixed.c
+	workload/readheavy.c
+	workload/scaling.c
+	workload/imbalance.c
 )
 set(WORKLOAD_TARGETS "")
 
