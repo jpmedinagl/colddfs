@@ -159,7 +159,7 @@ size_t generate_file_size(FileDistribution dist) {
             blocks = 1;
     }
     
-    return blocks * BLOCK_SIZE;
+    return blocks * 4096; //BLOCK_SIZE;
 }
 
 const char* dist_to_string(FileDistribution dist) {
