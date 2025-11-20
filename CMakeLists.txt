@@ -70,6 +70,7 @@ set(EXP_SRCS
     exp/medium_file.c
 
 	exp/truncation.c
+	exp/prepostallocate.c
 )
 set(EXP_TARGETS "")
 

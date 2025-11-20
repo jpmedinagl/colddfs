@@ -14,11 +14,15 @@
 
 #include "communication.h"
 
-#define LOGD(node_id, fmt, ...) \
-    do { \
-        printf("[DataNode %d] " fmt "\n", node_id, ##__VA_ARGS__); \
-        fflush(stdout); \
-    } while (0)
+#if LOG
+	#define LOGD(node_id, fmt, ...) \
+		do { \
+			printf("[DataNode %d] " fmt "\n", node_id, ##__VA_ARGS__); \
+			fflush(stdout); \
+		} while (0)
+#else
+	#define LOGD(node_id, fmt, ...) do {} while(0)
+#endif
 
 typedef struct DataNode {
     int node_id;

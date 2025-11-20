@@ -8,11 +8,15 @@
 
 #include "bitmap.h"
 
-#define LOGM(fmt, ...) \
-    do { \
-        printf("[MetaDtNode] " fmt "\n", ##__VA_ARGS__); \
-        fflush(stdout); \
-    } while (0)
+#if LOG
+	#define LOGM(fmt, ...) \
+		do { \
+			printf("[MetaDtNode] " fmt "\n", ##__VA_ARGS__); \
+			fflush(stdout); \
+		} while (0)
+#else
+	#define LOGM(fmt, ...) do {} while(0)
+#endif
 
 typedef struct DataNode DataNode;
 typedef struct AllocPolicy AllocPolicy;
