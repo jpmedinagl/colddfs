@@ -8,6 +8,8 @@
 #include <stdio.h>
 #include <errno.h>
 
+#define BLOCK_SIZE 4096 // 2097152 // 1048576 // 524288 // 262144 // 131072 // 65536 // 32768 // 16384 // 8192 // 4096
+
 typedef enum {
     DN_INIT,
     DN_ALLOC_BLOCK,
@@ -45,7 +47,7 @@ typedef struct {
 
 typedef struct {
     int block_index;
-    char buffer[4096]; // for read/write
+    char buffer[BLOCK_SIZE]; // for read/write
 } DNBlockPayload;
 
 typedef struct {

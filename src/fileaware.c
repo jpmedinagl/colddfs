@@ -4,7 +4,9 @@
 extern MetadataNode *md;
 extern AllocPolicy *policy;
 
-#define SMALL_FILE 4
+#ifndef SMALL_FILE_THRESHOLD
+    #define SMALL_FILE_THRESHOLD 4
+#endif
 
 int fileaware_init()
 {
@@ -18,7 +20,7 @@ int fileaware_allocate_block(AllocContext ctx, int *node_index)
 	int blocks_needed = ctx.file_blocks;
 
 	// 1. if blocks needed is small -> random
-	if (blocks_needed < SMALL_FILE) {
+	if (blocks_needed < SMALL_FILE_THRESHOLD) {
 		for (int attempts = 0; attempts < md->num_nodes * 2; attempts++) {
             int candidate = rand() % md->num_nodes;
             if (0 < md->blocks_free[candidate]) {

@@ -1,8 +1,6 @@
 #ifndef DATANODE_H
 #define DATANODE_H
 
-#define BLOCK_SIZE 4096
-
 #define _XOPEN_SOURCE 500
 
 #include <stdio.h>

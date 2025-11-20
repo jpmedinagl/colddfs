@@ -40,6 +40,12 @@ set(WORKLOAD_SRCS
 	workload/readheavy.c
 	workload/scaling.c
 	workload/imbalance.c
+	workload/distribution.c
+	
+	workload/block.c
+	workload/dist.c
+	workload/datascale.c
+	workload/fileawaretune.c
 )
 set(WORKLOAD_TARGETS "")
 
