@@ -209,13 +209,8 @@ MDNStatus metadatanode_create_file(const char * filename, size_t file_size, int 
     }
 
     int blocks_needed = (file_size + BLOCK_SIZE - 1) / BLOCK_SIZE;
-    if (blocks_needed > md->free_blocks) {
-        free(new_file->filename);
-        new_file->filename = NULL;
-        return MDN_NO_SPACE;
-    }
 
-    new_file->num_blocks = 0;
+    new_file->num_blocks = blocks_needed;
     new_file->blocks = malloc(sizeof(int) * blocks_needed);
     if (!new_file->blocks) {
         free(new_file->filename);
@@ -223,34 +218,9 @@ MDNStatus metadatanode_create_file(const char * filename, size_t file_size, int 
         return MDN_FAIL;
     }
 
-	AllocContext ctx = {
-        .file_blocks = blocks_needed,
-    };
-
-    for (int i = 0; i < blocks_needed; i++) {
-        int blk, node;
-        if (metadatanode_alloc_block(ctx, &blk, &node) != MDN_SUCCESS) {
-            LOGM("ERROR: Failed to allocate block %d for file '%s'", i, filename);
-            for (int j = 0; j < i; j++) {
-                int prev = new_file->blocks[j];
-                if (metadatanode_dealloc_block(prev) != MDN_SUCCESS) {
-                    fprintf(stderr, "Warning: failed to dealloc block %d\n", prev);
-                    return MDN_FAIL;
-                }
-            }
-            free(new_file->blocks);
-            new_file->blocks = NULL;
-            free(new_file->filename);
-            new_file->filename = NULL;
-            return MDN_NO_SPACE;
-        }
-
-        new_file->blocks[i] = blk;
-		md->block_mapping[blk] = node;
-        new_file->num_blocks++;
-
-        LOGM("Allocated block %d (global id=%d) on node %d for file '%s'", i, blk, node, filename);
-    }
+    for (int i = 0; i < new_file->num_blocks; i++) {
+		new_file->blocks[i] = -1;
+	}
 
     *fid = new_file->fid;
     md->num_files++;
@@ -290,7 +260,6 @@ MDNStatus metadatanode_truncate_file(int fid, size_t new_size)
     LOGM("Current blocks: %d, New blocks: %d", file->num_blocks, blocks_new);
 
 	if (blocks_new > file->num_blocks) {
-		// need to allocate new blocks
 		int blocks_needed = blocks_new - file->num_blocks;
 
 		int *new_blocks = realloc(file->blocks, sizeof(int) * blocks_new);
@@ -299,35 +268,20 @@ MDNStatus metadatanode_truncate_file(int fid, size_t new_size)
         }
 		file->blocks = new_blocks;
 
-		AllocContext ctx = {
-			.file_blocks = blocks_new,
-		};
-
 		for (int i = 0; i < blocks_needed; i++) {
-			int blk, node;
-			if (metadatanode_alloc_block(ctx, &blk, &node) != MDN_SUCCESS) {
-				// in this case we don't free the file
-				LOGM("ERROR: Failed to allocate block %d for file '%s'", i, file->filename);
-				for (int j = file->num_blocks; j < file->num_blocks + i; j++) {
-                    metadatanode_dealloc_block(file->blocks[j]);
-                }
-				return MDN_NO_SPACE;
-			}
-			
 			int block_idx = file->num_blocks + i;
-			file->blocks[block_idx] = blk;
-			md->block_mapping[blk] = node;
-
-			LOGM("Allocated block %d (global id=%d) on node %d for file '%s'", block_idx, blk, node, file->filename);
+			file->blocks[block_idx] = -1;
 		}
 		
 		file->num_blocks = blocks_new;
 	} else if (blocks_new < file->num_blocks) {
 		// free file blocks
-		int blocks_to_remove = file->num_blocks - blocks_new;
-
 		for (int i = file->num_blocks - 1; i >= blocks_new; i--) {
 			int block_id = file->blocks[i];
+			if (block_id == -1) {
+				continue;
+			}
+			
 			if (metadatanode_dealloc_block(block_id) != MDN_SUCCESS) {
                 fprintf(stderr, "Warning: failed to dealloc block %d\n", block_id);
                 return MDN_FAIL;
@@ -338,9 +292,10 @@ MDNStatus metadatanode_truncate_file(int fid, size_t new_size)
 
 		if (blocks_new > 0) {
 			int * new_blocks = realloc(file->blocks, sizeof(int) * blocks_new);
-			if (new_blocks) {
-				file->blocks = new_blocks;
+			if (!new_blocks) {
+				return MDN_FAIL;
 			}
+			file->blocks = new_blocks;
 		} else {
 			// truncated to 0
 			free(file->blocks);
@@ -378,29 +333,6 @@ MDNStatus metadatanode_write_file(int fid, void * buffer, size_t buffer_size)
 {
     FileEntry * file = &md->files[fid];
     size_t needed_blocks = (buffer_size + BLOCK_SIZE - 1) / BLOCK_SIZE;
-
-	AllocContext ctx = {
-		.file_blocks = needed_blocks
-	};
-
-    // allocate more blocks for file
-    if (needed_blocks > file->num_blocks) {
-        // size_t extra_blocks = needed_blocks - file->num_blocks;
-        int *new_blocks = realloc(file->blocks, sizeof(int) * needed_blocks);
-        if (!new_blocks) return MDN_FAIL;
-        file->blocks = new_blocks;
-
-        for (size_t i = file->num_blocks; i < needed_blocks; i++) {
-            int blk, node;
-            if (metadatanode_alloc_block(ctx, &blk, &node) != MDN_SUCCESS)
-                return MDN_NO_SPACE;
-
-            file->blocks[i] = blk;
-			md->block_mapping[blk] = node;
-        }
-
-        file->num_blocks = needed_blocks;
-    }
 
     // write file block by block
     for (size_t i = 0; i < needed_blocks; i++) {
@@ -525,6 +457,13 @@ MDNStatus metadatanode_read_block(int fid, int file_index, void * buffer)
     }
 
     int block_id = file->blocks[file_index];
+
+	if (block_id == -1) {
+		memset(buffer, 0, BLOCK_SIZE);
+		LOGM("Block %d not allocated, returning zeros", file_index);
+		return MDN_SUCCESS;
+	}
+
 	int node_id = md->block_mapping[block_id];
 
     LOGM("Block %d maps to: node=%d, block_id=%d", file_index, node_id, block_id);
@@ -574,7 +513,19 @@ MDNStatus metadatanode_write_block(int fid, int file_index, void * buffer)
         return MDN_FAIL;
 
     int block_id = file->blocks[file_index];
-	int node_id = md->block_mapping[block_id];
+	int node_id;
+
+	if (block_id == -1) {
+		AllocContext ctx = { .file_blocks = file->num_blocks };
+		if (metadatanode_alloc_block(ctx, &block_id, &node_id) != MDN_SUCCESS) {
+            fprintf(stderr, "Failed to allocate block for file_index=%d\n", file_index);
+            return MDN_NO_SPACE;
+        }
+        file->blocks[file_index] = block_id;
+        md->block_mapping[block_id] = node_id;
+	} else {
+		node_id = md->block_mapping[block_id];
+	}
 
     DNCommand cmd = DN_WRITE_BLOCK;
 
