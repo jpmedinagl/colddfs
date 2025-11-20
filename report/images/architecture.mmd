@@ -1,0 +1,9 @@
+---
+config:
+  layout: dagre
+  look: classic
+  theme: forest
+---
+flowchart TB
+    Z["Workload"] <-- Application API --> A["MetadataNode"]
+    A <-- Communication API --> B["DataNode"] & C["DataNode"] & D["DataNode"]

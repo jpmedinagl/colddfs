@@ -1,0 +1,7 @@
+policy,fill_pct,blocks_used,blocks_free,load_imbalance,load_std_dev,max_blocks,min_blocks,num_files,write_count,read_count,avg_write_latency_ms,avg_read_latency_ms,metadata_bytes
+weightedroundrobin,61,614,386,0.000000,0.0000,125,125,127,127,0,0.437694,0.000000,6616
+weightedroundrobin,59,596,404,0.000000,0.0000,125,125,127,127,0,0.443592,0.000000,6544
+weightedroundrobin,65,659,341,0.000000,0.0000,125,125,137,137,0,0.453505,0.000000,7116
+weightedroundrobin,69,696,304,0.000000,0.0000,125,125,147,147,0,0.445763,0.000000,7584
+weightedroundrobin,76,764,236,0.000000,0.0000,125,125,157,157,0,0.459561,0.000000,8176
+weightedroundrobin,80,800,200,0.000000,0.0000,125,125,166,166,0,0.454416,0.000000,8608

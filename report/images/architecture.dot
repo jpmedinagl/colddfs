@@ -1,0 +1,14 @@
+digraph G {
+    rankdir=TB; // top to bottom layout
+
+    Z [label="Workload"];
+    A [label="MetaDataNode"];
+    B [label="DataNode"];
+    C [label="DataNode"];
+    D [label="DataNode"];
+
+    Z -> A [label="Application API"];
+    A -> B [label="Communication API"];
+    A -> C [label="Communication API"];
+    A -> D [label="Communication API"];
+}

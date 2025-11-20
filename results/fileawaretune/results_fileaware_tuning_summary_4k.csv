@@ -1,0 +1,8 @@
+policy,threshold,num_nodes,distribution,block_size_bytes,total_capacity_mb,avg_write_latency_ms,avg_read_latency_ms,metadata_kb
+fileaware,1,8,uniform_large,4096,16,1.371162,0.000000,13.40
+fileaware,2,8,uniform_large,4096,16,1.161799,0.000000,13.38
+fileaware,4,8,uniform_large,4096,16,1.122374,0.000000,13.52
+fileaware,8,8,uniform_large,4096,16,1.133850,0.000000,13.52
+fileaware,16,8,uniform_large,4096,16,1.151057,0.000000,13.46
+fileaware,32,8,uniform_large,4096,16,1.195877,0.000000,13.39
+fileaware,64,8,uniform_large,4096,16,1.186802,0.000000,13.40

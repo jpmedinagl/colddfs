@@ -1,0 +1,6 @@
+policy,block_size_bytes,total_capacity_mb,total_blocks,files_created,avg_write_latency_ms,avg_read_latency_ms,write_throughput_mbps,load_imbalance,metadata_kb
+rand,65536,16,256,230,0.373016,0.193568,186.493878,0.000000,8.28
+rand,65536,16,256,230,0.180586,0.202761,385.220366,0.000000,8.28
+sequential,65536,16,256,231,0.192723,0.185602,359.396764,0.000000,8.31
+roundrobin,65536,16,256,231,0.193470,0.179107,358.008708,0.000000,8.31
+leastloaded,65536,16,256,231,0.182844,0.163945,378.814240,0.000000,8.31
