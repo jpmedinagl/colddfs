@@ -51,7 +51,7 @@ def plot(metric):
     plt.legend()
     plt.tight_layout()
     # plt.show()
-    plt.savefig(metric + ".pdf")
+    plt.savefig(metric + ".png")
 
 
 def format_bytes(x):
