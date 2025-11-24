@@ -31,10 +31,17 @@ typedef enum {
 } MDNStatus;
 
 typedef struct {
+	int num_blocks;
+	int * logical_blocks;
+	int * file_blocks;
+} NodeBlock;
+
+typedef struct {
     int fid;
     char * filename;
-    int num_blocks;
-    int * blocks;
+	// size_t file_size;
+	int num_blocks;
+	NodeBlock * nodes;
 } FileEntry;
 
 typedef struct {
@@ -57,8 +64,6 @@ typedef struct {
     NodeConnection * connections;
 	int * blocks_per_node;
 	int * blocks_free;
-
-    // AllocPolicy * policy;
 } MetadataNode;
 
 MDNStatus metadatanode_init(int num_dns, size_t capacity, const char *policy_name);

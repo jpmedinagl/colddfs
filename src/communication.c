@@ -108,3 +108,12 @@ ssize_t md_recv_response(int sock_fd, DNStatus *status, void **payload, size_t *
 
     return 0;
 }
+
+ssize_t md_send_data(int sock_fd, void *data, size_t data_size) {
+    return send_all(sock_fd, data, data_size);
+}
+
+ssize_t dn_recv_data(int sock_fd, void *buffer, size_t expected_size) {
+    return recv_all(sock_fd, buffer, expected_size);
+}
+

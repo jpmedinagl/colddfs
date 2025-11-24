@@ -16,6 +16,8 @@ typedef enum {
     DN_FREE_BLOCK,
     DN_READ_BLOCK,
     DN_WRITE_BLOCK,
+	DN_BATCH_READ,
+	DN_BATCH_WRITE,
     DN_EXIT,
 } DNCommand;
 
@@ -51,6 +53,11 @@ typedef struct {
 } DNBlockPayload;
 
 typedef struct {
+	int num_blocks;
+	int logical_blocks[];
+} DNBatchPayload;
+
+typedef struct {
 	int cleanup;
 } DNExitPayload;
 
@@ -65,5 +72,9 @@ ssize_t md_recv_response(int sock_fd, DNStatus *status, void **payload, size_t *
 ssize_t dn_recv_command(int sock_fd, DNCommand *cmd, void **payload, size_t *payload_size);
 
 ssize_t dn_send_response(int sock_fd, DNStatus status, void *payload, size_t payload_size);
+
+ssize_t md_send_data(int sock_fd, void *data, size_t data_size);
+
+ssize_t dn_recv_data(int sock_fd, void *buffer, size_t expected_size);
 
 #endif // COMMUNICATION_H

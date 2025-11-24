@@ -194,7 +194,7 @@ MDNStatus metadatanode_exit(int cleanup)
 MDNStatus metadatanode_create_file(const char * filename, size_t file_size, int * fid)
 {
     LOGM("===================================================================");
-    LOGM("Creating file '%s' with size %zu bytes (%zu blocks needed)", filename, file_size, (file_size + BLOCK_SIZE - 1) / BLOCK_SIZE);
+    LOGM("Creating file '%s' with size %zu bytes", filename, file_size);
 
     FileEntry * files = realloc(md->files, sizeof(FileEntry) * (md->num_files + 1));
     if (!files) return MDN_FAIL;
@@ -208,24 +208,25 @@ MDNStatus metadatanode_create_file(const char * filename, size_t file_size, int 
         return MDN_FAIL;
     }
 
-    int blocks_needed = (file_size + BLOCK_SIZE - 1) / BLOCK_SIZE;
+	// new_file->file_size = file_size;
+	new_file->num_blocks = (file_size + BLOCK_SIZE - 1) / BLOCK_SIZE;
 
-    new_file->num_blocks = blocks_needed;
-    new_file->blocks = malloc(sizeof(int) * blocks_needed);
-    if (!new_file->blocks) {
+	new_file->nodes = calloc(md->num_nodes, sizeof(NodeBlock));
+    if (!new_file->nodes) {
         free(new_file->filename);
-        new_file->filename = NULL;
         return MDN_FAIL;
     }
 
-    for (int i = 0; i < new_file->num_blocks; i++) {
-		new_file->blocks[i] = -1;
-	}
+	for (int i = 0; i < md->num_nodes; i++) {
+        new_file->nodes[i].num_blocks = 0;
+        new_file->nodes[i].logical_blocks = NULL;
+        new_file->nodes[i].file_blocks = NULL;
+    }
 
     *fid = new_file->fid;
     md->num_files++;
 
-    LOGM("Successfully created file '%s' with fid=%d, num_blocks=%d", filename, *fid, new_file->num_blocks);
+    LOGM("Successfully created file '%s' with fid=%d, size=%d", filename, *fid, file_size);
     LOGM("===================================================================\n");
 
     return MDN_SUCCESS;
@@ -253,103 +254,308 @@ MDNStatus metadatanode_truncate_file(int fid, size_t new_size)
 	FileEntry *file = &md->files[fid];
 
 	size_t current_size = file->num_blocks * BLOCK_SIZE;
+	int blocks_current = (current_size + BLOCK_SIZE - 1) / BLOCK_SIZE;
 	int blocks_new = (new_size + BLOCK_SIZE - 1) / BLOCK_SIZE;
 
 	LOGM("===================================================================");
     LOGM("Truncating file fid=%d (%s) from %zu to %zu bytes", fid, file->filename, current_size, new_size);
-    LOGM("Current blocks: %d, New blocks: %d", file->num_blocks, blocks_new);
+    LOGM("Current blocks: %d, New blocks: %d", blocks_current, blocks_new);
 
-	if (blocks_new > file->num_blocks) {
-		int blocks_needed = blocks_new - file->num_blocks;
-
-		int *new_blocks = realloc(file->blocks, sizeof(int) * blocks_new);
-        if (!new_blocks) {
-            return MDN_FAIL;
-        }
-		file->blocks = new_blocks;
-
-		for (int i = 0; i < blocks_needed; i++) {
-			int block_idx = file->num_blocks + i;
-			file->blocks[block_idx] = -1;
-		}
-		
+	if (blocks_new > blocks_current) {
 		file->num_blocks = blocks_new;
-	} else if (blocks_new < file->num_blocks) {
-		// free file blocks
-		for (int i = file->num_blocks - 1; i >= blocks_new; i--) {
-			int block_id = file->blocks[i];
-			if (block_id == -1) {
-				continue;
+	} else if (blocks_new < blocks_current) {
+		for (int dn = 0; dn < md->num_nodes; dn++) {
+			NodeBlock *nb = &file->nodes[dn];
+			if (nb->num_blocks == 0) continue;
+
+			int new_count = 0;
+
+			for (int j = 0; j < nb->num_blocks; j++) {
+				if (nb->file_blocks[j] < blocks_new) {
+					new_count++;
+				} else {
+					metadatanode_dealloc_block(nb->logical_blocks[j]);
+				}
 			}
-			
-			if (metadatanode_dealloc_block(block_id) != MDN_SUCCESS) {
-                fprintf(stderr, "Warning: failed to dealloc block %d\n", block_id);
-                return MDN_FAIL;
-            }
+
+			if (new_count > 0) {
+				int *new_logical = malloc(sizeof(int) * new_count);
+				int *new_file = malloc(sizeof(int) * new_count);
+
+				int idx = 0;
+				for (int j = 0; j < nb->num_blocks; j++) {
+					if (nb->file_blocks[j] < blocks_new) {
+						new_logical[idx] = nb->logical_blocks[j];
+						new_file[idx] = nb->file_blocks[j];
+						idx++;
+					}
+				}
+
+				free(nb->logical_blocks);
+				free(nb->file_blocks);
+				nb->logical_blocks = new_logical;
+				nb->file_blocks = new_file;
+				nb->num_blocks = new_count;
+			} else {
+				free(nb->logical_blocks);
+                free(nb->file_blocks);
+                nb->logical_blocks = NULL;
+                nb->file_blocks = NULL;
+                nb->num_blocks = 0;
+			}
 		}
 
 		file->num_blocks = blocks_new;
-
-		if (blocks_new > 0) {
-			int * new_blocks = realloc(file->blocks, sizeof(int) * blocks_new);
-			if (!new_blocks) {
-				return MDN_FAIL;
-			}
-			file->blocks = new_blocks;
-		} else {
-			// truncated to 0
-			free(file->blocks);
-			file->blocks = NULL;
-		}
 	} else {
 		LOGM("File size unchanged");
 	}
 
-	LOGM("Truncate complete: file now has %d blocks", file->num_blocks);
+	LOGM("Truncate complete: file now has %zu bytes", new_size);
     LOGM("===================================================================\n");
 
 	return MDN_SUCCESS;
 }
 
+MDNStatus nodeblock_add_mapping(NodeBlock *nb, int logical_block, int file_block)
+{
+	int *new_logical = realloc(nb->logical_blocks, sizeof(int) * (nb->num_blocks + 1));
+    int *new_file = realloc(nb->file_blocks, sizeof(int) * (nb->num_blocks + 1));
+    
+    if (!new_logical || !new_file) {
+        free(new_logical);
+        free(new_file);
+        return MDN_FAIL;
+    }
+    
+    nb->logical_blocks = new_logical;
+    nb->file_blocks = new_file;
+    nb->logical_blocks[nb->num_blocks] = logical_block;
+    nb->file_blocks[nb->num_blocks] = file_block;
+    nb->num_blocks++;
+    
+    return MDN_SUCCESS;
+}
+
+int find_block_location(FileEntry *file, int file_index, int *logical_block)
+{
+	for (int dn = 0; dn < md->num_nodes; dn++) {
+        NodeBlock *nb = &file->nodes[dn];
+        for (int i = 0; i < nb->num_blocks; i++) {
+            if (nb->file_blocks[i] == file_index) {
+                *logical_block = nb->logical_blocks[i];
+                return dn;
+			}
+		}
+	}
+	return -1;
+}
+
+void nodeblock_trim(NodeBlock *nb, int max_file_block) {
+    int new_count = 0;
+    
+    // Count blocks to keep
+    for (int j = 0; j < nb->num_blocks; j++) {
+        if (nb->file_blocks[j] < max_file_block) {
+            new_count++;
+        } else {
+            metadatanode_dealloc_block(nb->logical_blocks[j]);
+        }
+    }
+    
+    if (new_count == 0) {
+        free(nb->logical_blocks);
+        free(nb->file_blocks);
+        nb->logical_blocks = NULL;
+        nb->file_blocks = NULL;
+        nb->num_blocks = 0;
+        return;
+    }
+    
+    // Rebuild arrays
+    int *new_logical = malloc(sizeof(int) * new_count);
+    int *new_file = malloc(sizeof(int) * new_count);
+    
+    int idx = 0;
+    for (int j = 0; j < nb->num_blocks; j++) {
+        if (nb->file_blocks[j] < max_file_block) {
+            new_logical[idx] = nb->logical_blocks[j];
+            new_file[idx] = nb->file_blocks[j];
+            idx++;
+        }
+    }
+    
+    free(nb->logical_blocks);
+    free(nb->file_blocks);
+    nb->logical_blocks = new_logical;
+    nb->file_blocks = new_file;
+    nb->num_blocks = new_count;
+}
+
+MDNStatus batch_read_blocks(int node, int *logical_blocks, int num_blocks, void ** buffer)
+{	
+    DNCommand cmd = DN_BATCH_READ;
+
+	size_t payload_size = sizeof(DNBatchPayload) + sizeof(int) * num_blocks;
+
+	DNBatchPayload *payload = malloc(payload_size);
+	payload->num_blocks = num_blocks;
+	memcpy(payload->logical_blocks, logical_blocks, sizeof(int) * num_blocks);
+
+    if (md_send_command(md->connections[node].sock_fd, cmd, payload, payload_size) != 0) {
+        perror("Failed to send DN_READ");
+		free(payload);
+        return MDN_FAIL;
+    }
+	free(payload);
+
+    DNStatus status;
+    void *response_payload = NULL;
+    size_t response_size = BLOCK_SIZE;
+
+    if (md_recv_response(md->connections[node].sock_fd, &status, &response_payload, &response_size) != 0) {
+        perror("Failed to receive DN_READ response");
+        return MDN_FAIL;
+    }
+
+    if (status != DN_SUCCESS) {
+        LOGM("ERROR: DataNode %d failed to read block %d (status=%d)", node_id, block_id, status);
+        free(response_payload);
+        return MDN_FAIL;
+    }
+
+    *buffer = response_payload;
+
+    return MDN_SUCCESS;
+}
+
 MDNStatus metadatanode_read_file(int fid, void ** buffer, size_t * file_size)
 {
-    FileEntry file = md->files[fid];
+    FileEntry *file = &md->files[fid];
 
-    *file_size = file.num_blocks * BLOCK_SIZE;
+    *file_size = file->num_blocks * BLOCK_SIZE;
     *buffer = malloc(*file_size);
 
-    for (int i = 0; i < file.num_blocks; i++) {
-        void *block_ptr = (char *)(*buffer) + i * BLOCK_SIZE;
-        if (metadatanode_read_block(fid, i, block_ptr) != MDN_SUCCESS) {
-            free(*buffer);
-            return MDN_FAIL;
-        }
+	for (int n = 0; n < md->num_nodes; n++) {
+		NodeBlock *nb = &file->nodes[n];
+		if (nb->num_blocks == 0) continue;
+
+		void *blocks_data = malloc(nb->num_blocks * BLOCK_SIZE);
+		if (batch_read_blocks(n, nb->logical_blocks, nb->num_blocks, &blocks_data) != MDN_SUCCESS) {
+			free(blocks_data);
+			return MDN_FAIL;
+		}
+
+		for (int i = 0; i < nb->num_blocks; i++) {
+			int file_index = nb->file_blocks[i];
+			void *dest = (char *)(*buffer) + file_index * BLOCK_SIZE;
+			void *src = (char *)blocks_data + i * BLOCK_SIZE;
+			memcpy(dest, src, BLOCK_SIZE);
+		}
+		free(blocks_data);
+	}
+
+    return MDN_SUCCESS;
+}
+
+MDNStatus batch_write_blocks(int node, int *logical_blocks, int num_blocks, void *buffer)
+{	
+    DNCommand cmd = DN_BATCH_WRITE;
+
+    size_t payload_size = sizeof(DNBatchPayload) + sizeof(int) * num_blocks;
+    DNBatchPayload *payload = malloc(payload_size);
+    if (!payload) return MDN_FAIL;
+    
+    payload->num_blocks = num_blocks;
+    memcpy(payload->logical_blocks, logical_blocks, sizeof(int) * num_blocks);
+
+    // Send the payload (header with block IDs)
+    if (md_send_command(md->connections[node].sock_fd, cmd, payload, payload_size) != 0) {
+        perror("Failed to send DN_BATCH_WRITE");
+        free(payload);
+        return MDN_FAIL;
+    }
+    free(payload);
+
+    // Send the actual block data
+    size_t data_size = num_blocks * BLOCK_SIZE;
+    if (md_send_data(md->connections[node].sock_fd, buffer, data_size) != data_size) {
+        perror("Failed to send block data");
+        return MDN_FAIL;
+	}
+
+    // Receive response
+    DNStatus status;
+    void *response_payload = NULL;
+    size_t response_size = 0;
+
+    if (md_recv_response(md->connections[node].sock_fd, &status, &response_payload, &response_size) != 0) {
+        perror("Failed to receive DN_BATCH_WRITE response");
+        return MDN_FAIL;
+    }
+
+    free(response_payload);
+    
+    if (status != DN_SUCCESS) {
+        return MDN_FAIL;
     }
 
     return MDN_SUCCESS;
 }
 
-MDNStatus metadatanode_write_file(int fid, void * buffer, size_t buffer_size)
+MDNStatus metadatanode_write_file(int fid, void *buffer, size_t buffer_size)
 {
-    FileEntry * file = &md->files[fid];
+    FileEntry *file = &md->files[fid];
     size_t needed_blocks = (buffer_size + BLOCK_SIZE - 1) / BLOCK_SIZE;
 
-    // write file block by block
+    // First pass: allocate all blocks
     for (size_t i = 0; i < needed_blocks; i++) {
-        char block_buf[BLOCK_SIZE];
-        memset(block_buf, 0, BLOCK_SIZE);
+        int logical_block;
+        int node_id = find_block_location(file, i, &logical_block);
+        
+        // Allocate if not found
+        if (node_id == -1) {
+            AllocContext ctx = {.file_blocks = file->num_blocks};
+            if (metadatanode_alloc_block(ctx, &logical_block, &node_id) != MDN_SUCCESS) {
+                return MDN_NO_SPACE;
+            }
+            
+            if (nodeblock_add_mapping(&file->nodes[node_id], logical_block, i) != MDN_SUCCESS) {
+                return MDN_FAIL;
+            }
+        }
+    }
 
-        size_t offset = i * BLOCK_SIZE;
-        size_t remaining = buffer_size - offset;
-        size_t to_copy = remaining < BLOCK_SIZE ? remaining : BLOCK_SIZE;
+    // Second pass: batch write to each datanode
+    for (int n = 0; n < md->num_nodes; n++) {
+        NodeBlock *nb = &file->nodes[n];
+        if (nb->num_blocks == 0) continue;
 
-        memcpy(block_buf, (char *)buffer + offset, to_copy);
+        // Prepare buffer with blocks for this datanode
+        void *batch_buffer = malloc(nb->num_blocks * BLOCK_SIZE);
+        if (!batch_buffer) return MDN_FAIL;
 
-        if (to_copy < BLOCK_SIZE)
-            block_buf[to_copy] = '\0';
+        for (int i = 0; i < nb->num_blocks; i++) {
+            int file_index = nb->file_blocks[i];
+            void *dest = (char *)batch_buffer + i * BLOCK_SIZE;
+            
+            // Copy data from input buffer
+            size_t offset = file_index * BLOCK_SIZE;
+            size_t remaining = buffer_size > offset ? buffer_size - offset : 0;
+            size_t to_copy = remaining < BLOCK_SIZE ? remaining : BLOCK_SIZE;
+            
+            memset(dest, 0, BLOCK_SIZE);
+            if (to_copy > 0) {
+                memcpy(dest, (char *)buffer + offset, to_copy);
+            }
+        }
 
-        if (metadatanode_write_block(fid, i, block_buf) != MDN_SUCCESS)
+        // Send batch to datanode
+        if (batch_write_blocks(n, nb->logical_blocks, nb->num_blocks, batch_buffer) != MDN_SUCCESS) {
+            free(batch_buffer);
             return MDN_FAIL;
+        }
+
+        free(batch_buffer);
     }
 
     return MDN_SUCCESS;
@@ -379,28 +585,6 @@ MDNStatus metadatanode_alloc_block(AllocContext ctx, int * block_index, int * no
     *node_id = data_idx;
 
 	md->blocks_free[data_idx]--;
-
-    DNCommand cmd = DN_ALLOC_BLOCK;
-    DNBlockIndexPayload payload = {0};
-    payload.block_index = *block_index;
-
-    if (md_send_command(md->connections[*node_id].sock_fd, cmd, &payload, sizeof(payload)) != 0) {
-        bitmap_free(md->bitmap, md->num_blocks, blk);
-        md->free_blocks++;
-        perror("Failed to send DN_ALLOC");
-        return MDN_FAIL;
-    }
-
-    DNStatus status;
-    void *response_payload = NULL;
-    size_t response_size = 0;
-
-    if (md_recv_response(md->connections[*node_id].sock_fd, &status, &response_payload, &response_size) != 0) {
-        bitmap_free(md->bitmap, md->num_blocks, blk);
-        md->free_blocks++;
-        perror("Failed to receive DN_ALLOC response");
-        return MDN_FAIL;
-    }
 
     LOGM("Block allocated: global_id=%d, node=%d, free_blocks=%zu", blk, data_idx, md->free_blocks);
 
@@ -446,35 +630,28 @@ MDNStatus metadatanode_dealloc_block(int block_index)
 
 MDNStatus metadatanode_read_block(int fid, int file_index, void * buffer)
 {
-    FileEntry *file = &md->files[fid];
+	FileEntry *file = &md->files[fid];
     
-    LOGM("===================================================================");
-    LOGM("Reading block %d from file fid=%d (%s)", file_index, fid, file->filename);
-
     if (file_index < 0 || file_index >= file->num_blocks) {
-        LOGM("ERROR: Invalid file index %d (file has %d blocks)", file_index, file->num_blocks);
         return MDN_FAIL;
     }
-
-    int block_id = file->blocks[file_index];
-
-	if (block_id == -1) {
-		memset(buffer, 0, BLOCK_SIZE);
-		LOGM("Block %d not allocated, returning zeros", file_index);
-		return MDN_SUCCESS;
-	}
-
-	int node_id = md->block_mapping[block_id];
-
-    LOGM("Block %d maps to: node=%d, block_id=%d", file_index, node_id, block_id);
-         
+    
+    // Find which datanode has this block
+    int logical_block;
+    int node_id = find_block_location(file, file_index, &logical_block);
+    
+    // If block not allocated, return zeros
+    if (node_id == -1) {
+        memset(buffer, 0, BLOCK_SIZE);
+        return MDN_SUCCESS;
+    }
+    
+    // Read from datanode
     DNCommand cmd = DN_READ_BLOCK;
-
     DNBlockIndexPayload payload = {0};
-    payload.block_index = block_id;
+    payload.block_index = logical_block;
 
     if (md_send_command(md->connections[node_id].sock_fd, cmd, &payload, sizeof(payload)) != 0) {
-        perror("Failed to send DN_READ");
         return MDN_FAIL;
     }
 
@@ -483,12 +660,10 @@ MDNStatus metadatanode_read_block(int fid, int file_index, void * buffer)
     size_t response_size = BLOCK_SIZE;
 
     if (md_recv_response(md->connections[node_id].sock_fd, &status, &response_payload, &response_size) != 0) {
-        perror("Failed to receive DN_READ response");
         return MDN_FAIL;
     }
 
     if (status != DN_SUCCESS) {
-        LOGM("ERROR: DataNode %d failed to read block %d (status=%d)", node_id, block_id, status);
         free(response_payload);
         return MDN_FAIL;
     }
@@ -496,45 +671,36 @@ MDNStatus metadatanode_read_block(int fid, int file_index, void * buffer)
     memcpy(buffer, response_payload, BLOCK_SIZE);
     free(response_payload);
 
-    LOGM("Successfully read block %d from node %d", block_id, node_id);
-
-    LOGM("===================================================================\n");
-
     return MDN_SUCCESS;
 }
 
 MDNStatus metadatanode_write_block(int fid, int file_index, void * buffer) 
 {
-    LOGM("===================================================================");
-
-    FileEntry *file = &md->files[fid];
-
+	FileEntry *file = &md->files[fid];
+    
     if (file_index < 0 || file_index >= file->num_blocks)
         return MDN_FAIL;
+	
+	int logical_block;
+    int node_id = find_block_location(file, file_index, &logical_block);
 
-    int block_id = file->blocks[file_index];
-	int node_id;
-
-	if (block_id == -1) {
-		AllocContext ctx = { .file_blocks = file->num_blocks };
-		if (metadatanode_alloc_block(ctx, &block_id, &node_id) != MDN_SUCCESS) {
-            fprintf(stderr, "Failed to allocate block for file_index=%d\n", file_index);
+	if (node_id == -1) {
+        AllocContext ctx = {.file_blocks = file->num_blocks};
+        if (metadatanode_alloc_block(ctx, &logical_block, &node_id) != MDN_SUCCESS) {
             return MDN_NO_SPACE;
         }
-        file->blocks[file_index] = block_id;
-        md->block_mapping[block_id] = node_id;
-	} else {
-		node_id = md->block_mapping[block_id];
-	}
+        
+        if (nodeblock_add_mapping(&file->nodes[node_id], logical_block, file_index) != MDN_SUCCESS) {
+            return MDN_FAIL;
+        }
+    }
 
-    DNCommand cmd = DN_WRITE_BLOCK;
-
+	DNCommand cmd = DN_WRITE_BLOCK;
     DNBlockPayload payload;
-    payload.block_index = block_id;
+    payload.block_index = logical_block;
     memcpy(payload.buffer, buffer, BLOCK_SIZE);
 
     if (md_send_command(md->connections[node_id].sock_fd, cmd, &payload, sizeof(payload)) != 0) {
-        perror("Failed to send DN_WRITE");
         return MDN_FAIL;
     }
 
@@ -542,48 +708,39 @@ MDNStatus metadatanode_write_block(int fid, int file_index, void * buffer)
     void *response_payload = NULL;
     size_t response_size = 0;
 
-    if (md_recv_response(md->connections[node_id].sock_fd, &status,
-                         &response_payload, &response_size) != 0) {
-        perror("Failed to receive DN_WRITE response");
+    if (md_recv_response(md->connections[node_id].sock_fd, &status, &response_payload, &response_size) != 0) {
         return MDN_FAIL;
     }
 
     free(response_payload);
-
-    if (status != DN_SUCCESS) {
-        fprintf(stderr, "Data node %d failed to write block %d\n", node_id, block_id);
-        return MDN_FAIL;
-    }
-
-    LOGM("===================================================================\n");
 
     return MDN_SUCCESS;
 }
 
 MDNStatus metadatanode_end(void)
 {
-    for (int i = 0; i < md->num_files; i++) {
-        free(md->files[i].filename);
-        free(md->files[i].blocks);
-    }
+ //    for (int i = 0; i < md->num_files; i++) {
+ //        free(md->files[i].filename);
+ //        free(md->files[i].blocks);
+ //    }
 
-	free(md->block_mapping);
-	free(md->blocks_free);
-    free(md->files);
+	// free(md->block_mapping);
+	// free(md->blocks_free);
+ //    free(md->files);
 
-    free(md->bitmap);
-    md->bitmap = NULL;
+ //    free(md->bitmap);
+ //    md->bitmap = NULL;
 
-    free(md->connections);
-    md->connections = NULL;
+ //    free(md->connections);
+ //    md->connections = NULL;
 
-    free(md->nodes);
-    md->nodes = NULL;
+ //    free(md->nodes);
+ //    md->nodes = NULL;
     
-    free(md);
-    md = NULL;
+ //    free(md);
+ //    md = NULL;
     
-    alloc_policy_end();
+ //    alloc_policy_end();
 
     return MDN_SUCCESS;
 }

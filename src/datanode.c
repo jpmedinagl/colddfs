@@ -83,14 +83,14 @@ DNStatus datanode_read_block(int block_index, void * buffer)
     char filepath[512];
     snprintf(filepath, sizeof(filepath), "%s/block_%d.dat", dn->dir_path, block_index);
 
-    FILE *f = fopen(filepath, "rb");
-    if (!f) {
-        perror("fopen");
+    int fd = open(filepath, O_RDONLY);
+    if (fd < 0) {
+        perror("open");
         return DN_FAIL;
     }
 
-    size_t read_bytes = fread(buffer, 1, BLOCK_SIZE, f);
-    fclose(f);
+    ssize_t read_bytes = read(fd, buffer, BLOCK_SIZE);
+    close(fd);
 
     if (read_bytes != BLOCK_SIZE) {
         LOGD(dn->node_id, "incomplete read for block %d", block_index);
@@ -149,6 +149,21 @@ DNStatus datanode_exit(int cleanup, int * sockfd)
         dn = NULL;
     }	
     return DN_SUCCESS;
+}
+
+DNStatus datanode_batch_read(int *logical_blocks, int num_blocks, void *buffer)
+{	
+	DNStatus status = DN_SUCCESS;
+	for (int i = 0; i < num_blocks; i++) {
+		int logical_block = logical_blocks[i];
+		void *block_dest = (char *)buffer + i * BLOCK_SIZE;
+
+		status = datanode_read_block(logical_block, block_dest);
+		if (status != DN_SUCCESS) {
+			return status;
+		}
+	}
+	return status;
 }
 
 DNStatus datanode_service_loop(int sock_fd)
@@ -244,7 +259,48 @@ DNStatus datanode_service_loop(int sock_fd)
                 }
                 break;
             }
-            case DN_EXIT:
+			case DN_BATCH_READ: {
+				DNBatchPayload *p = (DNBatchPayload *)payload;
+				int num_blocks = p->num_blocks;
+				int *logical_blocks = p->logical_blocks;
+				
+				size_t response_size = num_blocks * BLOCK_SIZE;
+				void *response_buffer = malloc(response_size);
+				if (!response_buffer) {
+					dn_send_response(sock_fd, DN_FAIL, NULL, 0);
+					break;
+				}
+
+				DNStatus status = datanode_batch_read(logical_blocks, num_blocks, response_buffer);
+
+				if (status == DN_SUCCESS) {
+					dn_send_response(sock_fd, status, response_buffer, response_size);
+				} else {
+					dn_send_response(sock_fd, DN_FAIL, NULL, 0);
+				}
+
+				free(response_buffer);
+				break;
+			}
+			case DN_BATCH_WRITE: {
+				DNBatchPayload *p = (DNBatchPayload *)payload;
+    
+				// Receive block data
+				size_t data_size = p->num_blocks * BLOCK_SIZE;
+				void *data_buffer = malloc(data_size);
+				dn_recv_data(sock_fd, data_buffer, data_size);
+    
+				// Write each block
+				for (int i = 0; i < p->num_blocks; i++) {
+					void *block_data = (char *)data_buffer + i * BLOCK_SIZE;
+					datanode_write_block(p->logical_blocks[i], block_data);
+				}
+    
+				free(data_buffer);
+				dn_send_response(sock_fd, DN_SUCCESS, NULL, 0);
+				break;
+			}
+			case DN_EXIT:
 				DNExitPayload *p = (DNExitPayload *)payload;
 
                 int sockfd;
