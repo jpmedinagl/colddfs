@@ -1,0 +1,27 @@
+POSTALLOC BRANCH
+LAZY ALLOC ON WRITE
+
+$ ./simple 
+File System Performance Test
+========================================
+
+Created file in 0.00 ms (0.000 ms/block)
+
+Writing file...
+Write completed in 6.12 ms (0.061 ms/block)
+
+Reading file...
+Read completed in 1.60 ms (0.016 ms/block)
+Read 409600 bytes
+
+Verifying data...
+First block: This is block number 0 with some test data
+Last block:  This is block number 99 with some test data
+
+========================================
+SUMMARY:
+  Creat: 0.00 ms
+  Write: 6.12 ms
+  Read:  1.60 ms
+  Total: 7.72 ms
+========================================

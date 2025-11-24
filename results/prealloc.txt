@@ -1,0 +1,27 @@
+GOOD BRANCH
+ALLOC ON CREATE
+
+$ ./simple 
+File System Performance Test
+========================================
+
+Created file in 2.34 ms (0.023 ms/block)
+
+Writing file...
+Write completed in 3.88 ms (0.039 ms/block)
+
+Reading file...
+Read completed in 1.63 ms (0.016 ms/block)
+Read 409600 bytes
+
+Verifying data...
+First block: This is block number 0 with some test data
+Last block:  This is block number 99 with some test data
+
+========================================
+SUMMARY:
+  Creat: 2.34 ms
+  Write: 3.88 ms
+  Read:  1.63 ms
+  Total: 7.84 ms
+========================================

@@ -34,18 +34,18 @@ add_library(colddfs STATIC ${LIB_SRCS})
 # Workloads
 # ----------------------
 set(WORKLOAD_SRCS
-    workload/simple.c
-	workload/fill.c
-	workload/mixed.c
-	workload/readheavy.c
-	workload/scaling.c
-	workload/imbalance.c
-	workload/distribution.c
+ #    workload/simple.c
+	# workload/fill.c
+	# workload/mixed.c
+	# workload/readheavy.c
+	# workload/scaling.c
+	# workload/imbalance.c
+	# workload/distribution.c
 	
-	workload/block.c
-	workload/dist.c
-	workload/datascale.c
-	workload/fileawaretune.c
+	# workload/block.c
+	# workload/dist.c
+	# workload/datascale.c
+	# workload/fileawaretune.c
 )
 set(WORKLOAD_TARGETS "")
 
@@ -61,17 +61,19 @@ endforeach()
 # Experiments
 # ----------------------
 set(EXP_SRCS
-    exp/rand.c
-    exp/roundrobin.c
-    exp/leastloaded.c
-    exp/fileaware.c
-    exp/weightedroundrobin.c
+ #    exp/rand.c
+ #    exp/roundrobin.c
+ #    exp/leastloaded.c
+ #    exp/fileaware.c
+ #    exp/weightedroundrobin.c
 
-    exp/medium_file.c
+ #    exp/medium_file.c
 
-	exp/truncation.c
+	# exp/truncation.c
 
-	exp/prepostallocate.c
+	# exp/prepostallocate.c
+	exp/batch.c
+	exp/simple.c
 )
 set(EXP_TARGETS "")
 

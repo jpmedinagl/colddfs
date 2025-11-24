@@ -1,0 +1,28 @@
+BATCH BRANCH
+BATCH READ/WRITE
+
+$ ./simple 
+File System Performance Test
+========================================
+
+Created file in 0.00 ms (0.000 ms/block)
+
+Writing file...
+Write completed in 1.71 ms (0.017 ms/block)
+
+Reading file...
+Read completed in 0.73 ms (0.007 ms/block)
+Read 409600 bytes
+
+Verifying data...
+First block: This is block number 0 with some test data
+Last block:  This is block number 99 with some test data
+
+========================================
+SUMMARY:
+  Creat: 0.00 ms
+  Write: 1.71 ms
+  Read:  0.73 ms
+  Total: 2.44 ms
+========================================
+
