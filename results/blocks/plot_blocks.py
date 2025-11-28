@@ -46,7 +46,7 @@ def plot(metric):
     plt.xscale("log", base=2)   # optional: block sizes are powers of two
 
     # Format x ticks nicely as KB, MB, etc.
-    plt.xticks(block_sizes, [format_bytes(b) for b in block_sizes], rotation=45)
+    plt.xticks(block_sizes, [format_bytes(b) for b in block_sizes], rotation=0)
     
     plt.legend()
     plt.tight_layout()

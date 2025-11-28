@@ -74,6 +74,8 @@ set(EXP_SRCS
 	# exp/prepostallocate.c
 	exp/batch.c
 	exp/simple.c
+	exp/block_size.c
+	exp/batch_block.c
 )
 set(EXP_TARGETS "")
 

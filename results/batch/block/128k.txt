@@ -1,0 +1,32 @@
+File System Performance Test
+========================================
+
+File System Performance Test
+========================================
+
+File System Performance Test
+========================================
+
+File System Performance Test
+========================================
+
+Created file in 0.00 ms (0.000 ms/block)
+
+Writing file...
+Write completed in 5.20 ms (0.163 ms/block)
+
+Reading file...
+Read completed in 4.07 ms (0.127 ms/block)
+Read 4194304 bytes
+
+Verifying data...
+First block: This is block number 0 with some test data
+Last block:  This is block number 31 with some test data
+
+========================================
+SUMMARY:
+  Creat: 0.00 ms
+  Write: 5.20 ms
+  Read:  4.07 ms
+  Total: 9.27 ms
+========================================
