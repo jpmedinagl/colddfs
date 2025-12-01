@@ -4,6 +4,8 @@
 \subsection{Allocation Policy Effects}
 \label{s:policy_effects}
 
+Policy does not currently affect anything since it is sequential.
+
 \subsubsection{File Aware Tuning}
 \label{s:fileawaretuning}
 
@@ -43,8 +45,28 @@ GOOD
 \label{f:}
 \end{figure}
 
-\subsection{Pre-allocation on Create vs. Allocate on Write}
-\label{s:allocate}
+\subsection{Implementation Benchmarks}
+\label{s:implementation_bench}
+
+\begin{figure}[H]
+\centerline{\includegraphics[width=\columnwidth]{plots/batch/latency_impl.png}}
+\caption{}
+\label{f:}
+\end{figure}
+
+\begin{figure}[H]
+\centerline{\includegraphics[width=\columnwidth]{plots/batch/block/read.png}}
+\caption{}
+\label{f:}
+\end{figure}
+
+\begin{figure}[H]
+\centerline{\includegraphics[width=\columnwidth]{plots/batch/block/write.png}}
+\caption{}
+\label{f:}
+\end{figure}
+
+
 
 % \begin{figure}[H]
 % \centerline{\includegraphics[width=\columnwidth]{}}

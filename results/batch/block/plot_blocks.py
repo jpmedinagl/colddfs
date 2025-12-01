@@ -5,7 +5,7 @@ def metric_str(metric):
     return ["Create", "Write", "Read"][metric]
 
 def build_df(file):
-    file = "avg.csv"
+    file = "avg_seq.csv"
 
     if not file:
         print("No summary.csv files found.")
@@ -49,7 +49,7 @@ def plot(results, metric):
     # plt.legend()
     plt.tight_layout()
     # plt.show()
-    plt.savefig(metric_str(metric) + ".png")
+    plt.savefig(metric_str(metric) + "_seq.png")
 
 
 def format_bytes(x):

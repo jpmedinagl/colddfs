@@ -1,0 +1,4 @@
+type,create,write,read,total
+prealloc,2.34,3.88,1.63,7.84
+postalloc,0.00,6.12,1.60,7.72
+batchalloc,0.00,1.71,0.73,2.44
