@@ -310,6 +310,8 @@ perform quite similarly.
 Below are described the block allocation policies.
 
 \subsubsection{Random}
+\
+
 Random allocation policy uses a random number to decide between the nodes.
 However, blocks are not attempted to be allocated on an already full node, so
 if the node is full, another pass of the random number is generated. This is
@@ -317,21 +319,29 @@ done until the number of nodes attemps has passed, then we just loop through
 the nodes in order to find an available node.
 
 \subsubsection{Sequential}
+\
+
 Sequential allocation policy allocates on the same node starting from node 0
 until the node becomes full. Then it allocates on the next node until it becomes
 full. This process repeats. Thus a file that is created, will be allocated on
 the same node.
 
 \subsubsection{Round Robin}
+\
+
 Round robin allocation policy allocates a block according to round robin. Round
 robin initially starts with node 0 and allocates a block on each node before
 allocating back on node 0.
 
 \subsubsection{Least Loaded}
+\
+
 Least loaded allocation policy allocates a block on the least loaded node. This
 allocation policy attempts to balance the load on each node.
 
 \subsubsection{File Aware}
+\
+
 File aware allocation policy is a hybrid allocation policy which defines a
 parameter \texttt{SMALL\_FILE\_THRESHOLD}. If the number of blocks to be 
 allocated at the same time is lower than this threshold, the random policy is 
@@ -366,21 +376,74 @@ would be populated without the overhead of creating the file. This design
 was considered with speed in mind.
 
 \subsubsection{Postallocate on Write}
-The second design considered was to post-allocate (lazy allocate) necessary 
-blocks on block/file writes. During file creation, only the metadata is modified
-in the datanode and no communication to the nodes is sent. On a block write,
+The second design considered was to allocate (lazy allocate) necessary 
+blocks on block/file writes instead of during file creation. During file 
+creation, only the metadata is modified
+in the metadata node and no communication to the data nodes is sent. On a block write,
 the metadata node will send a write command to the involved node. The data
 node will then be responsible for creating this file and storing the block contents.
 
 The design was considered to solve two considerations. The first consideration is
-of space, although the common case is to write the file block by block without
-blocks, there might be cases where file blocks are allocated by have no actual
-data inside. With the previous design, these blocks would be allocated on the
-data node, thereby reducing the space of the data node with empty blocks.
+of space, although it is uncommon to have holes in files, or empty blocks,
+there might be cases where file blocks are allocated by have no actual
+data inside (an example is when creating a large file, but only actually writing
+a small amount). With the previous design, these blocks would be allocated on the
+data node, thereby reducing the space of the data node with empty unused blocks.
 
-The second consideration was speed ?
+The second consideration was speed. Consider the case where we create an empty
+file with 4MB of data, but at this point have written nothing to the file.
+If we try reading this file, in the previous design, the metadata node would
+send requests to the datanodes to obtain all of the allocated blocks for the
+file. However these blocks are empty and don't have any useful data inside. In
+the new design, the metadata node can see the mapping for the file entry and see
+that the logical blocks map to node -1. Meaning there is no mapping, which means
+this block hasn't been allocated yet, and thus the metadata node does not need
+to send any requests to the data nodes.
 
 \subsubsection{Batch Operations per Node}
 The third design considered was batching of blocks. In the two previous designs,
-operations
+operations are heavily focused on blocks. Consider a round robin block allocation
+of a file with 7 blocks and 2 data nodes. In this case we have the following
+distribution of nodes:
 
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\columnwidth]{images/batch.png}
+    \caption{Distribution of blocks given 7 blocks for a file and round robin 
+    allocation policy.}
+    \label{f:}
+\end{figure}
+
+The distribution has 4 blocks on datanode 1 and 3 blocks on datanode 2. However
+the order of the blocks relative to the file blocks make it so that they alternate
+between the nodes.
+
+In the previous implementations, the operations were done per block. Reading
+a file involved looping through each file block in order, and sending a request 
+to the mapped datanode for the block and waiting for a response. This 
+resulted in us sending O(\#blocks) requests from the metadata node.
+
+In this implementation, the focus was batching blocks for a file in a request. 
+In the example above, datanode 1 has blocks 0, 2, 4, 6 for this file, which means
+that we can send a single request to the datanode for those blocks, and obtain
+a response with those 4 blocks. Similarly we send a request to datanode 2 for
+the rest of the blocks. This means that we only send maximum O(\#datanodes) 
+requests from the metadata node as the blocks as batched together in one request. 
+However there is a tradeoff to consider.
+
+There is added complexity in keeping track of blocks in the file entry. Each
+file must now keep track of each data node, and which file blocks each data node
+holds along with the logical blocks. There is a slight increase in metadata overhead
+and processing because if we have a large number of nodes, we must loop through 
+all the nodes and see which ones contain the relevant blocks for this file.
+
+The tradeoff is that as block sizes get bigger, the number of blocks for a file
+get smaller. If we consider a 1MB file with 64KB block size, that gives us
+16 blocks, and if the number of data nodes is at least this, there is no
+benefit to batching. 
+
+This is however, extremely workload dependent as it will depend
+on how large the files are in the workload, and how many data nodes there are.
+However this gives us an indication that tuning the block size to fit the
+workload can give us the best benefit for batching. And that in some cases (very
+small files) batching is unnecessary.
