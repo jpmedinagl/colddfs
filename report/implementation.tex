@@ -6,8 +6,8 @@ outlined. Firstly, the architecture of the file system will be described and how
 the distributed part of the file system was simulated. The application 
 interfaces will be described which serves as the file system operations that 
 are supported. The communication interfaces between the different nodes will 
-also be outlined.
-
+also be outlined. The implementations of the different nodes will be described
+as well as different considered implementations to enhance performance.
 Additionally the details of the tracking of metadata, as well as the block 
 allocation policies will be described.
 
@@ -15,9 +15,11 @@ allocation policies will be described.
 \label{s:architecture}
 
 The distributed file system simulator has a similar architecture to the 
-Google File System. \todo[inline]{GFS Ref.} There is a single metadata node
-responsible for metadata tracking of each file, and multiple data nodes which
-hold the data of each file.
+Google File System.\ref{} 
+There is a single metadata node responsible for tracking the metadata of each file, 
+creating and tracking connections to each data node, as well as the mappings of 
+blocks to the data nodes which store them. There are
+multiple data nodes which hold the data of each file.
 
 \begin{figure}[H]
     \centering
@@ -25,17 +27,18 @@ hold the data of each file.
     \caption{Architecture Design for the Distributed File System. 
     The MetadataNode exposes the application API. The MetadataNode 
     and DataNodes communicate via the communication API.}
-    \label{f:}
+    \label{f:architecture}
 \end{figure}
 
-The metadata node is connected to the various data nodes and communicates through
-the communication interface. And the metadata node communicates to the workload
-through the application interface.
+Figure \ref{f:architecture} visualizes the architecture of the simulator.
+The workload communicates with the \code{MetadataNode} through the application
+interface. The \code{MetadataNode} is connected to the various \code{DataNodes} and 
+communicates through the communication interface.
 
-Due to the fact that this is a distributed file system simulator, the application
-all runs on the same machine. The metadata node and data nodes are simulated
-as different machines by each running their own program and communicating through a
-local unix socket to simulate being on different machines.
+The simulator simulates the "distributed" aspect of the file system by creating
+different processes as data nodes which are created by the metadata node during
+initialization. The different processes simulate running as different machines
+by communicating through unix sockets.
 
 \subsection{Application API}
 \label{s:applicationapi}
@@ -43,50 +46,116 @@ local unix socket to simulate being on different machines.
 The application API provides an interface for interacting with the distributed 
 file system simulator. It exposes functions for initializing and shutting
 down the file system, creating, reading, writing, and managing file system blocks.
-The API is intended to be used by client applications that need to access or
+The API is intended to be used by workloads that need to access or
 manipulate file system data while abstracting the management.
-
 The API can be categorized into three functional groups:
 \begin{itemize}
     \item \textbf{Initialization and Cleanup}: Functions to start and stop the file
-    system. Involves creating the various datanodes and connecting to them.
+    system simulator. Involves creating the various data nodes and connecting to them.
     \item \textbf{File Management:} Functions for creating, locating, truncating, reading,
     and writing to files.
     \item \textbf{Block-level Operations:} Functions for directly reading and writing
     individual file blocks.
 \end{itemize}
 
-% DESCRIBE API
-
-Below are the application API that describes the functions that the client or workload
-can interact with.
+Below are the application interface functions that describe the operations that
+the workload can interact with.
  
+The \code{init} function is used to initialize the simulator, it takes in a number
+of datanodes to be used for the file system, as well as total file system capacity,
+and a block allocation policy string. This function calls the metadata node
+initialization.
 \begin{lstlisting}
-init(int num_dns, size_t capacity, const char *policy_name)
-
-exit(int cleanup)
-
-create_file(const char *filename, size_t file_size, int *fid)
-
-find_file(const char *filename, int *fid)
-
-truncate_file(int fid, size_t new_size)
-
-read_file(int fid, void **buffer, size_t *file_size)
-
-write_file(int fid, void *buffer, size_t buffer_size)
-
-read_block(int fid, int file_index, void *buffer)
-
-write_block(int fid, int file_index, void * buffer)
+    init(int num_dns, size_t capacity, const char *policy_name)
 \end{lstlisting}
+
+The \code{exit} function is used to terminate the simulator. It takes a parameter, cleanup
+which is used to clean up the datanode directories or leave them as is. This
+parameter is used so that the block distribution contents can be observed after
+a workload has ended.
+\begin{lstlisting}
+    exit(int cleanup)
+\end{lstlisting}
+
+The \code{create\_file} function is used to create a file within the simulator. It takes
+in a filename, a file size, and returns the file id of the file. This file id
+is used to more easily identify a file within the file system.
+\begin{lstlisting}
+    create_file(const char *filename, size_t file_size, int *fid)
+\end{lstlisting}
+
+The \code{find\_file} function is used to find a file from its filename. This is a helper
+function used to obtain a files file id given its name.
+\begin{lstlisting}
+    find_file(const char * filename, int * fid);
+\end{lstlisting}
+
+The \code{truncate\_file} function is used to change the size of a file given its file
+id, with the new size of the file as a parameter. Depending on implementation
+this may modify metadata only or modify actual file system blocks.
+\begin{lstlisting}
+    truncate_file(int fid, size_t new_size)
+\end{lstlisting}
+
+The \code{read\_file} function is used to read an entire files contents. The file id
+is an input, and as an output, the file contents and file size are given.
+\begin{lstlisting}
+    read_file(int fid, void **buffer, size_t *file_size)
+\end{lstlisting}
+
+The \code{write\_file} function is used to write an entire files contents to the file
+system. The file id, and buffer contents along with its size are inputs.
+\begin{lstlisting}
+    write_file(int fid, void *buffer, size_t buffer_size)
+\end{lstlisting}
+
+The \code{read\_block} function is used to read an individual block from a file given
+its file id and the file index. The block contents are written to a buffer of that
+size.
+\begin{lstlisting}
+    read_block(int fid, int file_index, void *buffer)
+\end{lstlisting}
+
+The \code{write\_block} function is used to write to an individual block from a file given
+its file id and file index. The block contents are given as a buffer that will
+be written to the file system.
+\begin{lstlisting}
+    write_block(int fid, int file_index, void * buffer)
+\end{lstlisting}
+
+The above functions serve as the public application API to the simulator. These
+functions were used to investigate the performance of the simulator. Each operation
+returns an enum of error or success codes which help identify if an operation 
+was successful or not.
 
 \subsection{MetadataNode}
 \label{s:metadatanode}
-The single metadatanode is responsible for keeping track of all of the file
-metadata and space for the file system. It has a few data structures that are
-used to keep track of this information and ensure communication between itself
-and the datanodes.
+
+The \code{MetadataNode} is responsible for managing the data nodes, as well as 
+keeping track of all of the file metadata and space for the file system. 
+It has a few data structures that are used to keep track of this information 
+and ensure communication between itself and the datanodes.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\columnwidth]{images/metadata_struct1.png}
+    \caption{\code{MetadataNode} structure regarding tracking of the data nodes
+    and connections.}
+    \label{f:metadata_struct1}
+\end{figure}
+
+Figure \ref{f:metadata_struct1} shows the structure that the metadata uses to
+keep track of the nodes. It keeps track of the number of nodes, the connections
+to the nodes, as well as a list of blocks per node, and the number of free blocks
+each node has. The connections keep track of the process id, used only for clean
+up, and the socked file descriptor which is used to communicate between the 
+processes.
+
+The \code{blocks\_per\_node} is used since the total file system capacity might
+not be a clean multiple of the total number of nodes and some nodes may have more
+blocks than others. For example, the case where there is 3 nodes but 4 blocks,
+one node requires an extra block. The number of free blocks is also tracked
+to avoid requests to allocate to a full node, which would return no space. 
 
 \begin{figure}[H]
     \centering

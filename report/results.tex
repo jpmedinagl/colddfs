@@ -137,9 +137,11 @@ tradeoffs between them.
 
 The experiment was done as follows.
 % \experiment{
-% 4 datanodes
-% 16 MB file created, written to, and then read
-% total size, 16 MB * 4 (so each node can fully hold file
+% 3 datanodes
+% 100 block file created, written to, and then read
+% total size file size * 3
+% roundrobin
+% block size 4096
 % }
 
 \begin{figure}[H]
@@ -150,13 +152,13 @@ The experiment was done as follows.
 
 Figure \ref{} shows the results of the experiment. Each group of bars represents
 a different implementation. Each bar in the group represents the different quantities
-measured, create latency, write latency, and read latency, as well as the total latency
+measured, the create latency, write latency, and read latency, as well as the total latency
 shown in red.
 
 We can observe that the total latency between the preallocate and postallocate 
 implementations are the same. This is because in this case, there are no empty 
 blocks in the file, all blocks are allocated during the write, and thus both 
-implementations will take the same amount of time. However we can see the 
+implementations will take the same amount of total time. However we can see the 
 difference between these two implementations by looking at the create and write 
 latencies. Since pre-allocate allocates on create, the create latency is much larger
 than post-allocate as post-allocate only modifies metadata. However we can see that
@@ -164,13 +166,14 @@ the write latency for the pre-allocate is much lower than post-allocate. This is
 because the pre-allocate implementation does more work before the write, and thus
 has faster writes.
 
-We can thus see a tradeoff between these two implementations. If speed takes priority
+We can thus see a tradeoff between these two implementations. If speed is a priority
 in a write-heavy workload, then doing pre-allocation would be a good idea because
 creating the file can reduce the write latency. However as mentioned previously,
 pre-allocate potentially takes up more space as the entire file is allocated when
 the full file may not be written to. Thus if storage takes priority, post-allocation
 would be a better implementation as this can save us from allocating empty blocks
-in a file (though in a typical file system this may not be common).
+in a file and saves us from making requests to empty blocks 
+(though in a typical file system this may not be common).
 
 We can now compare these implementations to the batch allocation. As mentioned
 in an earlier section, batch allocation works by batching the blocks sent to one
@@ -178,7 +181,39 @@ data node together, regardless of the file order. This saves on number of reques
 sent by the metadata node.
 
 We can see that the create latency is as fast as post-allocate because it only involves
-metadata modification. However we can see a much 
+metadata modification. However we can see a much lower write latency than both
+the preallocate and postallocate implementations. This is because we batch blocks
+to the same data nodes together. In the experiment, we have 100 blocks and 3 
+datanodes. Using roundrobin, each block gets allocated in alternating round robin 
+fashion. For preallocate and postallocate, there are 100 requests sent total
+each of 1 block size. However in batch allocation, only 3 requests are sent, each
+of size roughly 33 blocks. This is much faster because we write everything we
+need to the datanode in a single request, removing the overhead of more requests
+to the same datanode.
+
+We can see that the read latency is also faster in the batch allocation because
+similarly with the write, we make a single request for all of the involved blocks
+per datanode. Thereby reducing the overhead in communication to the same datanode.
+
+The total latency of the batch allocation is roughly 3x lower than both
+implementations. We can thus see the benefits of batch allocation when sending
+more than 1 block to each datanode. 
+
+
+As mentioned in a previous experiment, modifying the block size can gives a benefit
+because we write more data to each data node. However, as we make the block size
+larger, there is less benefit to batching because there are less blocks to batch.
+And as mentioned previously, the tradeoff of making blocks as large as possible
+comes with wasting more storage as small files will use up only a fraction
+of the total block.
+
+In the following experiment, the block size is investigated against batching.
+% \experiment{
+% 4 datanodes
+% 16 MB file created, written to, and then read
+% total size, 16 MB * 4 (so each node can fully hold file)
+% averaged over 3 runs
+% }
 
 \begin{figure}[H]
 \centerline{\includegraphics[width=\columnwidth]{plots/batch/block/read.png}}
@@ -186,16 +221,43 @@ metadata modification. However we can see a much
 \label{f:}
 \end{figure}
 
+Figure \ref{} shows the read time latency versus the block size for the above
+experiment. We can see that the read latency drops as as block size increases
+but somewhat stabilizes at larger block sizes.
+
 \begin{figure}[H]
 \centerline{\includegraphics[width=\columnwidth]{plots/batch/block/write.png}}
 \caption{}
 \label{f:}
 \end{figure}
 
+Figure \ref{} shows the write latency versus the block size for the above experiment.
+We can see that the write latency drops as block size increases but approaches
+a minimum and stabilizes at larger block sizes.
 
+Batching and block sizes are quite similar in distributed file systems. Batching
+in this report refers to batching blocks together, sending the data to a single
+data node. Extents in this report refers to increasing the block size past the
+common 4096KB size. In terms of request size, batching and extents look the same.
+Batching 2 blocks of 4096KB vs 1 extent of 8192KB looks roughly the same in the
+simulator in terms of communication. The metadata node is sending roughly 8192KB
+to a datanode to store (some bytes for the metadata difference since 2 blocks
+require 2 integers identifying the block vs 1 integer to identify the extent).
+However the difference is made in how the datanode handles the request. Batching
+2 blocks reduces the number of requests sent from the metadata, however requires
+the datanode to handle the creation of creating and writing two separate file
+blocks in its own file system directory. In the case of the extent, the communication
+overhead is the same as the batching, but it makes the datanode create and write
+a single file with all of the data. Thus we can see that although batching brings
+a benefit as it lowers the write and read latency, ultimately there is an overhead
+of handling the different file blocks that increasing the extent size solves.
+Having a larger extent looks the same as batching but has lower overhead in the
+datanode. This is the reason why we observe the trends in Figures \ref{} and
+\ref{}. As block size increases, the latency becomes lower since the datanode
+has less blocks to handle, however as the block size grows to become similarly
+sized to the file, the benefit of increasing the extents minimizes because
+the latency is now driven by the writing to the file.
 
-% \begin{figure}[H]
-% \centerline{\includegraphics[width=\columnwidth]{}}
-% \caption{}
-% \label{f:}
-% \end{figure}
+As mentioned before, increasing the extent size increases internal fragmentation
+and wastes space. However too low of an extent size and the file system has
+to handle more blocks which increases overhead in handling in the datanodes.

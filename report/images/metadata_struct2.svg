@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 750 300" style="background:white">
+
+  <rect x="30" y="30" width="310" height="250" fill="#cde498" stroke="#13540c" stroke-width="2"/>
+  <text x="180" y="65" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#000" text-anchor="middle">
+    MetadataNode
+  </text>
+
+  <rect x="50" y="100" width="270" height="150" fill="#e8f4d7" stroke="#13540c" stroke-width="1"/>
+  
+  <text x="70" y="130" font-family="Consolas, monospace" font-size="16" fill="#000">
+    int num_nodes
+  </text>
+  <text x="70" y="160" font-family="Consolas, monospace" font-size="16" fill="#000">
+    Connection[] connections
+  </text>
+  <text x="70" y="190" font-family="Consolas, monospace" font-size="16" fill="#000">
+    int[] blocks_per_node
+  </text>
+  <text x="70" y="220" font-family="Consolas, monospace" font-size="16" fill="#000">
+    int[] blocks_free
+  </text>
+
+
+  <rect x="380" y="30" width="300" height="190" fill="#cde498" stroke="#13540c" stroke-width="2"/>
+  <text x="530" y="65" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#000" text-anchor="middle">
+    Connection
+  </text>
+
+  <rect x="400" y="100" width="260" height="90" fill="#e8f4d7" stroke="#13540c" stroke-width="1"/>
+  
+  <text x="420" y="128" font-family="Consolas, monospace" font-size="16" fill="#000">
+    int pid
+  </text>
+  <text x="420" y="158" font-family="Consolas, monospace" font-size="16" fill="#000">
+    int sock_fd
+  </text>
+
+</svg>
