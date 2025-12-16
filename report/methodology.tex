@@ -1,2 +1,38 @@
 \section{Methodology}
 \label{s:methodology}
+
+\subsection{Development Environment}
+The distributed file system simulator was implemented in C, chosen for its
+low-level control over system resources. The development and testing were
+conducted on a Linux-based system. The simulator uses standard POSIX API:
+\begin{itemize}
+    \item Process management (fork)
+    \item UNIX domain sockets for inter-process communication
+    \item File I/O operations for persistent storage
+    \item Memory Management for buffer allocation.
+\end{itemize}
+
+
+\subsection{Experimental Setup}
+All experiments were executed on a single physical machine. While this setup does
+not capture network latency effects present in distributed systems, it allows for
+controlled evaluation of algorithmic and architectural design decisions.
+
+The simulation environment created separate processes for each data node,
+with communication occuring through UNIX sockets to approximate the message-passing
+behaviour of networked systems. Each node maintains its own directory within the host
+file system, simulating independent isolated storage devices.
+
+\subsection{Experimental Procedure}
+For each experiment configuration:
+\begin{enumerate}
+    \item Initialize the simulator with specific parameters (data nodes, capacity,
+    block size, allocation policy).
+    \item Create workload based on operation type (ex. 50\% reads, 20\% writes, etc...)
+    \item Collect timing data for each operations.
+    \item Calculate aggregate performance metrics
+    \item Clean up data node directories.
+    \item Repeat for statistical validation.
+\end{enumerate}
+
+All experiments were designed to isolate the impact of individual parameters.

@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 670 265" style="background:white">
+
+  <rect x="30" y="30" width="280" height="205" fill="#cde498" stroke="#13540c" stroke-width="1"/>
+  <text x="160" y="65" font-family="Consolas, monospace" font-size="24" fill="#000" text-anchor="middle">
+    FileEntry
+  </text>
+
+  <rect x="50" y="90" width="240" height="120" fill="#e8f4d7" stroke="#13540c" stroke-width="1"/>
+  
+  <text x="70" y="115" font-family="Consolas, monospace" font-size="16" fill="#000">
+    int fid
+  </text>
+  <text x="70" y="140" font-family="Consolas, monospace" font-size="16" fill="#000">
+    char[] filename
+  </text>
+  <text x="70" y="165" font-family="Consolas, monospace" font-size="16" fill="#000">
+    int num_blocks
+  </text>
+  <text x="70" y="190" font-family="Consolas, monospace" font-size="16" fill="#000">
+    NodeBlock[] nodes
+  </text>
+
+  <rect x="360" y="30" width="280" height="180" fill="#cde498" stroke="#13540c" stroke-width="1"/>
+  <text x="490" y="65" font-family="Consolas, monospace" font-size="24" fill="#000" text-anchor="middle">
+    NodeBlock
+  </text>
+
+  <rect x="380" y="90" width="240" height="95" fill="#e8f4d7" stroke="#13540c" stroke-width="1"/>
+  
+  <text x="400" y="115" font-family="Consolas, monospace" font-size="16" fill="#000">
+    int num_blocks
+  </text>
+  <text x="400" y="140" font-family="Consolas, monospace" font-size="16" fill="#000">
+    int[] file_blocks
+  </text>
+  <text x="400" y="165" font-family="Consolas, monospace" font-size="16" fill="#000">
+    int[] logical_blocks
+  </text>
+
+</svg>

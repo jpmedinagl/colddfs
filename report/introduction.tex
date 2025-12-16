@@ -1,2 +1,22 @@
 \section{Introduction}
 \label{s:introduction}
+
+Distributed file systems have become an important infrastructure in modern computing,
+enabling scalable storage solutions across multiple machines. Systems like the
+Google File System \cite{gfs} demonstrate how distributed architectures can be designed
+to optimize specific workloads.
+Understanding performance implications of design decisions in distributed file
+systems requires extensive experimentation that can be costly and complex.
+
+This report presents a distributed file system simulator designed to investigate
+key performance characteristics and design tradeoffs in distributed file systems.
+The simulator implements a GFS-inspired architecture with a single metadata node
+coordinating multiple data nodes.
+
+Originally the purpose of the simulator was to investigate complex block allocation
+strategies such as in J. Liao et al. \cite{blockalloc}. However the overhead of 
+implementing the architecture
+and communication of the simulator meant various aspects of the simulator such
+as parallelism and concurrency were not able to be implemented. This meant that
+studying the effects of block allocation strategies turned out to be non-informative.
+The limitations and future work of the simulator will be discussed in a later section.

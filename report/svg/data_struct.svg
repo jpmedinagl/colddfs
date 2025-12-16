@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 340" style="background:white">
+
+  <rect x="50" y="50" width="300" height="240" fill="#cde498" stroke="#13540c" stroke-width="1"/>
+  <text x="200" y="85" font-family="Consolas, monospace" font-size="24" fill="#000" text-anchor="middle">
+    DataNode
+  </text>
+
+  <rect x="75" y="100" width="250" height="165" fill="#e8f4d7" stroke="#13540c" stroke-width="1"/>
+  
+  <text x="90" y="128" font-family="Consolas, monospace" font-size="16" fill="#000">
+    int sock_fd
+  </text>
+  <text x="90" y="156" font-family="Consolas, monospace" font-size="16" fill="#000">
+    int node_id
+  </text>
+  <text x="90" y="184" font-family="Consolas, monospace" font-size="16" fill="#000">
+    char dir_path[256]
+  </text>
+  <text x="90" y="212" font-family="Consolas, monospace" font-size="16" fill="#000">
+    int capacity
+  </text>
+  <text x="90" y="240" font-family="Consolas, monospace" font-size="16" fill="#000">
+    int size
+  </text>
+
+</svg>

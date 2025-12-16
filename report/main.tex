@@ -11,17 +11,17 @@
 
 \newcommand{\code}[1]{\texttt{#1}}
 
-% REMOVE
-\setlength {\marginparwidth }{2cm}
-\usepackage[colorinlistoftodos]{todonotes}
+% % REMOVE
+% \setlength {\marginparwidth }{2cm}
+% \usepackage[colorinlistoftodos]{todonotes}
 
 \begin{document}
 
 \maketitle
 
-\listoftodos
+% \listoftodos
 
-\input{abstract.tex}
+% \input{abstract.tex}
 
 \input{introduction.tex}
 
@@ -35,8 +35,11 @@
 
 \input{futurework.tex}
 
-\input{references.tex}
+% \input{references.tex}
 
-\input{appendices.tex}
+% \input{appendices.tex}
+
+\bibliographystyle{plain}   % or IEEEtran
+\bibliography{refs}
 
 \end{document}

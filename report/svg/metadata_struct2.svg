@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 330" style="background:white">
+
+  <rect x="30" y="30" width="380" height="275" fill="#cde498" stroke="#13540c" stroke-width="1"/>
+  <text x="220" y="65" font-family="Consolas, monospace" font-size="24" fill="#000" text-anchor="middle">
+    MetadataNode
+  </text>
+
+  <rect x="50" y="90" width="340" height="190" fill="#e8f4d7" stroke="#13540c" stroke-width="1"/>
+  
+  <text x="70" y="115" font-family="Consolas, monospace" font-size="16" fill="#000">
+    int fs_capacity
+  </text>
+  <text x="70" y="140" font-family="Consolas, monospace" font-size="16" fill="#000">
+    size_t num_blocks
+  </text>
+  <text x="70" y="165" font-family="Consolas, monospace" font-size="16" fill="#000">
+    size_t free_blocks
+  </text>
+  <text x="70" y="190" font-family="Consolas, monospace" font-size="16" fill="#000">
+    bitmap_t* bitmap
+  </text>
+  <text x="70" y="215" font-family="Consolas, monospace" font-size="16" fill="#000">
+    int[] block_mapping
+  </text>
+  <text x="70" y="240" font-family="Consolas, monospace" font-size="16" fill="#000">
+    int num_files
+  </text>
+  <text x="70" y="265" font-family="Consolas, monospace" font-size="16" fill="#000">
+    FileEntry[] files
+  </text>
+
+
+  <rect x="460" y="30" width="310" height="200" fill="#cde498" stroke="#13540c" stroke-width="1"/>
+  <text x="615" y="65" font-family="Consolas, monospace" font-size="24" fill="#000" text-anchor="middle">
+    FileEntry
+  </text>
+
+  <rect x="480" y="90" width="270" height="115" fill="#e8f4d7" stroke="#13540c" stroke-width="1"/>
+  
+  <text x="500" y="115" font-family="Consolas, monospace" font-size="16" fill="#000">
+    int fid
+  </text>
+  <text x="500" y="140" font-family="Consolas, monospace" font-size="16" fill="#000">
+    char[] filename
+  </text>
+  <text x="500" y="165" font-family="Consolas, monospace" font-size="16" fill="#000">
+    int num_blocks
+  </text>
+  <text x="500" y="190" font-family="Consolas, monospace" font-size="16" fill="#000">
+    int[] blocks
+  </text>
+
+</svg>

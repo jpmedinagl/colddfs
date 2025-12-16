@@ -1,2 +1,91 @@
+\section{Limitations}
+\label{s:limitations}
+
+\subsection{Sequential Processing Architecture}
+
+The most significant limitation of the current simulator is the sequential processing
+model. The metadata node processes each request one at a time, sending commands
+to data nodes and waiting for responses before proceeding to the next operation.
+This design constraint has several important implications. 
+
+The allocation policy performance is affected since most allocation strategies
+perform similarly as there is no difference between different nodes receiving requests.
+
+The data node scaling is also affected as increasing the number of data nodes
+does not improve performance, which should be expected as more data nodes mean
+more concurrent processing of requests.
+
+\subsection{Metadata Node Bottleneck}
+
+Unlike the Google File System architecture that inspired this simulator, the metadata
+node sits directly in the communication path between workloads / client and the
+data nodes. In GFS, the metadata node provides block locations to clients, who are
+then responsible to communicate directly with data nodes. The current design
+makes it so that all information passes through the metadata node which creates a 
+bottleneck.
+
+To mitigate this limitation, the implementation places the workload and metadata node
+in the same process, eliminating communication overhead between them.
+
+\subsection{Single-Machine Simulation}
+
+The simulator executes all processes on a single machine. This is a limitation as
+there are no network effects captured. Another problem is the fact that these separate
+processes share resources. Even with concurrency in the simulator, all data nodes
+would write / read from the same storage device which does not represent
+the resource independence of separate machines.
+
 \section{Future Work}
 \label{s:future_work}
+
+\subsection{Metadata Parallelism}
+
+Implementing multi-threaded request handling in the metadata node would allow for concurrent
+communication with multiple data nodes. Each thread could manage communication with a specific
+data node or handle a specific request, with proper synchronization. This would enable
+the metadata node to send more than one request to separate data nodes at a time.
+
+\subsection{Data Node Parallelism}
+
+Extending data nodes to handle multiple concurrent requests would further improve
+performance. This would require implementing locking mechanisms to protect file blocks
+from concurrent access. This would allow a single data node to handle multiple operations
+simultaneously.
+
+\subsection{Caching}
+
+Another important aspect of traditional file systems is caching. Accessing storage
+devices can be quite slow, and buffering recently accessed data with the principle of
+temporal locality can improve performance. In the distributed file system case, 
+the network communication overhead makes caching even more critical. Caching could
+be implemented at three different levels in a distributed file system. Client-side
+caching could help performance if blocks are accessed multiple times, which would
+save having to traverse full request path, as well as caching file block locations
+(as in GFS) which would allow client to skip extra requests to the metadata node. 
+Data node caching could help performance as maintaining a buffer of recently used
+blocks could allow the simulator to skip reading and writing on every operation.
+
+Note that Metadata Node caching would also help performance. Though in the case
+of the current simulator, the simulator was implemented such that the metadata
+node structures are all kept within memory. A future implementation would require
+the metadata node to keep these structures within the host file system, and caching
+would help performance of keeping track of file blocks for data nodes.
+
+\subsection{Futher Work}
+
+There are tons of different aspects of the distributed file system that could
+be implemented to make the simulator behave closer towards a real distributed
+file system, as well as improve its performance. Aspects such as reliability and
+fault tolerance, efficient metadata management, and more complex block allocation
+strategies.
+
+\section{Conclusion}
+
+Despite its limitations, this simulator successfully demonstrates key design
+tradeoffs in distributed file systems. The experiments reverl important insights
+about block size selection, allocation timing, and batching strategies that remain
+valid even in the sequential processing model.
+
+The future work outlined above would transform this simulator into a more comprehensive
+research and educational tool. The enhancements would create a platform for exploring
+and experimenting distributed file system design decisions.

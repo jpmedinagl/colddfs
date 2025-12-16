@@ -1,11 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 750 300" style="background:white">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 300" style="background:white">
 
-  <rect x="30" y="30" width="310" height="250" fill="#cde498" stroke="#13540c" stroke-width="2"/>
-  <text x="180" y="65" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#000" text-anchor="middle">
+  <rect x="30" y="30" width="310" height="240" fill="#cde498" stroke="#13540c" stroke-width="1"/>
+  <text x="180" y="65" font-family="Consolas, monospace" font-size="24" fill="#000" text-anchor="middle">
     MetadataNode
   </text>
 
-  <rect x="50" y="100" width="270" height="150" fill="#e8f4d7" stroke="#13540c" stroke-width="1"/>
+  <rect x="50" y="100" width="270" height="140" fill="#e8f4d7" stroke="#13540c" stroke-width="1"/>
   
   <text x="70" y="130" font-family="Consolas, monospace" font-size="16" fill="#000">
     int num_nodes
@@ -21,12 +21,12 @@
   </text>
 
 
-  <rect x="380" y="30" width="300" height="190" fill="#cde498" stroke="#13540c" stroke-width="2"/>
-  <text x="530" y="65" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#000" text-anchor="middle">
+  <rect x="380" y="30" width="310" height="180" fill="#cde498" stroke="#13540c" stroke-width="1"/>
+  <text x="530" y="65" font-family="Consolas, monospace" font-size="24" fill="#000" text-anchor="middle">
     Connection
   </text>
 
-  <rect x="400" y="100" width="260" height="90" fill="#e8f4d7" stroke="#13540c" stroke-width="1"/>
+  <rect x="400" y="100" width="270" height="80" fill="#e8f4d7" stroke="#13540c" stroke-width="1"/>
   
   <text x="420" y="128" font-family="Consolas, monospace" font-size="16" fill="#000">
     int pid

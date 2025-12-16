@@ -5,27 +5,26 @@
 \label{s:policy_effects}
 
 The initial purpose of the simulator was to benchmark and investigate different
-block allocation strategies on the simulator. Attempting to see the effects
+block allocation strategies and attempting to see the effects
 of different workloads on the distributed file system.
 
-However, due to time constraints, the simulator is entirely sequential. Meaning
+However, the current design of the simulator is entirely sequential. Thus
 requests are sent one at a time from the metadata node to the data nodes, and
 requests are waited on by the metadata node until there's a response.
+This resulted in different allocation policies performing similarly and not
+having a large effect on the performance of the simulator.
 
-This means that different allocation policies did not seem to have a large
-effect on the performance of the simulator.
-
-\subsubsection{File Aware Tuning}
+\subsection{File Aware Tuning}
 \label{s:fileawaretuning}
-\
 
 The file aware allocation policy works by switching between a random policy
-versus least loaded when the number of allocated blocks at the same time are 
+versus least loaded policy when the number of allocated blocks at the same time are 
 below a small file threshold.
 
-These tests were ran on the implementation of preallocate. Meaning the file 
-would be allocated all at once during creation, and thus we know whether it
-will be a small file or large file depending on its size. On later implementations
+The following test was ran on the implementation of preallocate. The file 
+would be allocated all at once during creation, and thus the simulator could
+differentiate between small files or large files depending on their creation
+size. On later implementations
 like postallocate, this allocation policy will shift in meaning from small file
 vs large file, to small allocation group vs large allocation group. This is 
 because with lazy allocation, we might not allocate the entire file at once. 
@@ -36,16 +35,57 @@ randomly though it is a large file. For the later implementations, a more clever
 file aware allocation policy should be created.
 
 The small file threshold can be tuned since random allocation is much faster than
-least loaded. In the following experiment, a block size of 4096KB was used
+least loaded. The reason being because least loaded requires looping through all
+of the data nodes and keeping track of the least loaded node.
+
+% EXPERIMENT
+% BLOCK_SIZE = 4096KB
+% DATANODES = 8
+% CAPACITY = 16MB
+% DISTRIBUTION = UNIFORMLY LARGE FILES
+
+\begin{table}[H]
+    \centering
+    \caption{File Aware Tuning Experiment}
+    \label{t:fileaware_tune_table}
+    \begin{tabular}{l|l}
+        Capacity & 16 MB \\
+        Datanodes & 8 \\
+        Block Size & 4096 KB \\
+        Distribution & UNIFORM LARGE \\
+    \end{tabular}
+\end{table}
 
 \begin{figure}[H]
-\centerline{\includegraphics[width=\columnwidth]{plots/fileawaretune/avg_write_latency_ms4k.png}}
-\caption{}
-\label{f:}
+    \centerline{\includegraphics[width=\columnwidth]{plots/fileawaretune/avg_write_latency_ms4k.png}}
+    \caption{Average Write Latency vs Threshold Size for File Aware Policy. Tuning the
+    small file threshold.}
+    \label{f:fileaware_tune}
 \end{figure}
 
-\subsection{File Distribution Impact}
-\label{s:file_dist_impact}
+\autoref{t:fileaware_tune_table} outlines the parameters of the experiment.
+The purpose of the experiment was to observe the effect of the small file threshold
+parameter with respect to the file aware tuning policy. The average write latency
+was measured for each threshold.
+
+The results of the experiment in Figure \ref{f:fileaware_tune} show that the
+small file threshold minimizes the average write latency at around 4 blocks.
+Having the small file threshold have less blocks (1-2 blocks) makes it so that
+virtually every file uses the least loaded policy which is slow. However making
+the small file threshold have more blocks (16+ blocks) makes it so that large
+files use random policy, that although fast, can start to get slower. The reason
+for this being that for very large files, least loaded picks the least loaded node
+and then sends all the requests to this node. For a large file using the random
+policy means that for every block, we have the overhead of randomly picking a node.
+
+It's important to note that this specific experiment does not show that the small
+file threshold minimizes latency at 4 blocks for all workloads. The effects we
+see are due to the block size we are using, the number of data nodes, and the
+file distribution. However this experiment shows that the simulator can show
+that optimizations can be done for different workloads.
+
+% \subsection{File Distribution Impact}
+% \label{s:file_dist_impact}
 
 \subsection{Data Node Scaling}
 \label{s:datanode_scaling}
@@ -55,7 +95,7 @@ the performance of the application. However, due to the sequential nature of the
 simulator, the data node number did not affect the performance of the file system.
 
 Since the simulator was sequential, the metadata node sending a request to a 
-datanode looks the same regardless of the data node. This is because nodes do
+data node looks the same regardless of the data node. This is because nodes do
 not have outstanding requests, each node handles one request at a time and 
 responds to the metadata node. And thus sending to any data node looks the same.
 
@@ -90,7 +130,7 @@ of metadata overhead and complexity.
 \label{s:extend_based_blocks}
 
 The block size is a pretty important parameter in distributed file systems.
-Distributed file systems do not have to adhere to any strict block sizes since
+Distributed file systems do not have to adhere to any block sizes since
 file contents are stored in data nodes own file system as files. This means
 that blocks can be as small or large as required.
 
@@ -102,40 +142,60 @@ already sending a request.
 Larger block sizes can be beneficial, but too large of block sizes and the 
 bottleneck of the simulator will be sending the requests.
 
+\begin{table}[H]
+    \centering
+    \caption{Optimal Block Size Experiment}
+    \label{t:optimal_block_size}
+    \begin{tabular}{l|l}
+        Capacity & 16 MB \\
+        Datanodes & 8 \\
+        Operations & 500 \\
+        Distribution & WEB \\
+    \end{tabular}
+\end{table}
 
-
-\begin{figure}[H]
+\begin{figure}[h]
 \centerline{\includegraphics[width=\columnwidth]{plots/blocks/write_throughput_mbps.pdf}}
-\caption{}
-\label{f:}
+\caption{Write throughput vs Block Size for the experiment outlined in 
+\autoref{t:optimal_block_size}.}
+\label{f:optimal_block_throughput}
 \end{figure}
 
-\begin{figure}[H]
+\begin{figure}[h]
 \centerline{\includegraphics[width=\columnwidth]{plots/blocks/avg_write_latency_ms.pdf}}
-\caption{}
-\label{f:}
+\caption{Average Write Latency vs Block Size for the experiment outlined in
+\autoref{t:optimal_block_size}.}
+\label{f:optimal_block_latency}
 \end{figure}
 
-Figure \ref{} outlines the experiment of measuring the average write latency versus
-the block size. We can observe a minimum around the 32KB-64KB block size. This
-means that for this workload, having block sizes wich are small/mid sized
-allows us to minimize the write latency. This is because really small block sizes
-increase the number of requests to the simulator, and this becomes the bottleneck.
-Really large block sizes minimize the number of requests but lengthen the time
-to process requests which becomes the bottleneck.  
+\autoref{t:optimal_block_size} outlines the experiment for measuring the performance
+of the simulator against different block sizes.
+
+Figure \ref{f:optimal_block_throughput} shows the write throughput versus
+the block size for the experiment. We can observe that the throughput increases
+fast at first and then steadily evens out.
+
+Figure \ref{f:optimal_block_latency} shows the average write latency versus
+the block size for the experiment.
+We can observe a minimum around the 32KB-64KB block size. This
+means that for this workload, having block sizes which are small/mid sized
+allows us to minimize the write latency. 
+The reason for this being that too small block sizes increase the number of
+requests from the metadata node, and this becomes the bottleneck as there are too
+many requests. However, too large block sizes minimize the number of requests
+but they lengthen the time to process the requests, the writing becomes the
+bottleneck. 
 
 \subsection{Implementation Benchmarks}
 \label{s:implementation_bench}
 
 In the previous section, it was outlined that various different implementations
-were considered. Specifically, pre-allocate - allocating on file creation, 
-post-allocate - allocating on write, batch-allocate - batch allocate blocks
-sent to same node.
-
+for the simulator were considered. Specifically, pre-allocate - allocating on 
+file creation, post-allocate - allocating on write, batch-allocate - batch 
+allocate blocks sent to same node.
 We can do a simple benchmark over these implementations and observe different
 tradeoffs between them.
 
-The experiment was done as follows.
 % \experiment{
 % 3 datanodes
 % 100 block file created, written to, and then read
@@ -144,13 +204,26 @@ The experiment was done as follows.
 % block size 4096
 % }
 
+\begin{table}[H]
+    \centering
+    \caption{Allocate Implementation Benchmark}
+    \label{t:allocate_impl_bench}
+    \begin{tabular}{l|l}
+        Capacity & 100 blocks * 3 \\
+        Datanodes & 3 \\
+        Block Size & 4096 KB \\
+        Policy & Round Robin \\
+    \end{tabular}
+\end{table}
+
 \begin{figure}[H]
 \centerline{\includegraphics[width=\columnwidth]{plots/batch/latency_impl.png}}
-\caption{}
-\label{f:}
+\caption{Latency per Operation versus allocation implementation for the experiment
+in \autoref{t:allocate_impl_bench}.}
+\label{f:batch_latency}
 \end{figure}
 
-Figure \ref{} shows the results of the experiment. Each group of bars represents
+Figure \ref{f:batch_latency} shows the results of the experiment. Each group of bars represents
 a different implementation. Each bar in the group represents the different quantities
 measured, the create latency, write latency, and read latency, as well as the total latency
 shown in red.
@@ -207,7 +280,6 @@ And as mentioned previously, the tradeoff of making blocks as large as possible
 comes with wasting more storage as small files will use up only a fraction
 of the total block.
 
-In the following experiment, the block size is investigated against batching.
 % \experiment{
 % 4 datanodes
 % 16 MB file created, written to, and then read
@@ -215,23 +287,34 @@ In the following experiment, the block size is investigated against batching.
 % averaged over 3 runs
 % }
 
+\begin{table}[H]
+    \centering
+    \caption{Batch Block Size Tuning}
+    \label{t:batch_block}
+    \begin{tabular}{l|l}
+        Capacity & 64 MB \\
+        Datanodes & 4 \\
+        Policy & Round Robin \\
+    \end{tabular}
+\end{table}
+
 \begin{figure}[H]
 \centerline{\includegraphics[width=\columnwidth]{plots/batch/block/read.png}}
 \caption{}
-\label{f:}
+\label{f:batch_block_read}
 \end{figure}
 
-Figure \ref{} shows the read time latency versus the block size for the above
+Figure \ref{f:batch_block_read} shows the read time latency versus the block size for the above
 experiment. We can see that the read latency drops as as block size increases
 but somewhat stabilizes at larger block sizes.
 
 \begin{figure}[H]
 \centerline{\includegraphics[width=\columnwidth]{plots/batch/block/write.png}}
 \caption{}
-\label{f:}
+\label{f:batch_block_write}
 \end{figure}
 
-Figure \ref{} shows the write latency versus the block size for the above experiment.
+Figure \ref{f:batch_block_write} shows the write latency versus the block size for the above experiment.
 We can see that the write latency drops as block size increases but approaches
 a minimum and stabilizes at larger block sizes.
 
@@ -252,8 +335,8 @@ a single file with all of the data. Thus we can see that although batching bring
 a benefit as it lowers the write and read latency, ultimately there is an overhead
 of handling the different file blocks that increasing the extent size solves.
 Having a larger extent looks the same as batching but has lower overhead in the
-datanode. This is the reason why we observe the trends in Figures \ref{} and
-\ref{}. As block size increases, the latency becomes lower since the datanode
+datanode. This is the reason why we observe the trends in Figures \ref{f:batch_block_read} and
+\ref{f:batch_block_write}. As block size increases, the latency becomes lower since the datanode
 has less blocks to handle, however as the block size grows to become similarly
 sized to the file, the benefit of increasing the extents minimizes because
 the latency is now driven by the writing to the file.
